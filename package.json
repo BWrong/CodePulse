@@ -1,51 +1,52 @@
- {
-   "name": "codepulse",
-   "displayName": "CodePulse",
-   "description": "在 VS Code 内查看按项目汇总的编码时间",
-   "version": "0.0.1",
-   "publisher": "BWrong",
-   "engines": {
-     "vscode": "^1.74.0"
-   },
-   "categories": [
-     "Other"
-   ],
-   "activationEvents": [
-     "onCommand:codepulse.openDashboard"
-   ],
-   "main": "./out/extension.js",
-   "contributes": {
-     "commands": [
-       {
-         "command": "codepulse.openDashboard",
-         "title": "Open Dashboard",
-         "category": "CodePulse"
-       }
-     ]
-   },
-   "scripts": {
-     "compile": "tsc -p ./",
-     "watch": "tsc -watch -p ./",
-     "pretest": "npm run compile && npm run lint",
-     "lint": "eslint src --ext ts",
-     "test": "node ./out/test/runTest.js"
-   },
-   "devDependencies": {
-     "@types/vscode": "^1.74.0",
-     "@types/node": "20.x",
-     "@typescript-eslint/eslint-plugin": "^6.7.0",
-     "@typescript-eslint/parser": "^6.7.0",
-     "eslint": "^8.50.0",
-     "typescript": "^5.2.2"
-   },
-   "keywords": [
-     "wakatime",
-     "time-tracking",
-     "productivity"
-   ],
-   "license": "MIT",
-   "repository": {
-     "type": "git",
-     "url": "https://github.com/BWrong/CodePulse.git"
-   }
- }
+{
+  "name": "codepulse",
+  "displayName": "CodePulse",
+  "description": "在 VS Code 内查看按项目汇总的编码时间",
+  "version": "0.0.1",
+  "publisher": "BWrong",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:codepulse.openDashboard"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codepulse.openDashboard",
+        "title": "Open Dashboard",
+        "category": "CodePulse"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "mocha --ui tdd out/test/**/*.test.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "eslint": "^8.50.0",
+    "mocha": "^10.0.0",
+    "typescript": "^5.2.2"
+  },
+  "keywords": [
+    "wakatime",
+    "time-tracking",
+    "productivity"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BWrong/CodePulse.git"
+  }
+}
