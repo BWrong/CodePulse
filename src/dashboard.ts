@@ -399,8 +399,8 @@
       color: var(--fg);
       white-space: nowrap;
     }
-    .u-axis { color: var(--fg) !important; }
-    .u-label { color: var(--fg) !important; }
+    .u-axis { color: var(--muted) !important; }
+    .u-label { color: var(--muted) !important; }
     .u-title { display: none !important; }
     .u-legend { display: none !important; }
     .u-select { background: rgba(14, 99, 156, 0.1) !important; }
@@ -437,6 +437,7 @@
       const vscode = acquireVsCodeApi();
       let currentDays = 7;
       let chart = null;
+      let chartResizeHandler = null;
 
       const contentEl = document.getElementById('content');
       const tabEls = document.querySelectorAll('.tab');
@@ -573,6 +574,10 @@
           return;
         }
         if (chart) {
+          if (chartResizeHandler) {
+            window.removeEventListener('resize', chartResizeHandler);
+            chartResizeHandler = null;
+          }
           chart.destroy();
         }
 
@@ -607,7 +612,7 @@
             {},
             {
               stroke: 'var(--accent)',
-              fill: 'rgba(14, 99, 156, 0.15)',
+              fill: 'rgba(14, 99, 156, 0.35)',
               width: 2,
               spline: true,
             }
@@ -627,7 +632,6 @@
                   return;
                 }
                 const day = days[idx];
-                const totalHours = (day.totalSeconds / 3600).toFixed(2);
                 const projectRows = (day.projects || [])
                   .filter(p => p.totalSeconds > 0)
                   .sort((a, b) => b.totalSeconds - a.totalSeconds)
@@ -643,7 +647,7 @@
                   \${projectRows}
                   <div class="uplot-tooltip-row total">
                     <span class="uplot-tooltip-label">合计</span>
-                    <span class="uplot-tooltip-value">\${totalHours} 小时</span>
+                    <span class="uplot-tooltip-value">\${formatDuration(day.totalSeconds)}</span>
                   </div>
                 \`;
 
@@ -662,6 +666,13 @@
             ]
           }
         }, [timestamps, values], chartEl);
+
+        chartResizeHandler = () => {
+          if (chart) {
+            chart.setSize(chartEl.clientWidth, 240);
+          }
+        };
+        window.addEventListener('resize', chartResizeHandler);
 
         chartEl.addEventListener('mouseleave', () => {
           tooltip.classList.add('hidden');
