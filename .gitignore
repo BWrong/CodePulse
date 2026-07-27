@@ -3,3 +3,5 @@
  .vscode-test
  *.vsix
  /tmp/npm-cache
+node_modules
+out
