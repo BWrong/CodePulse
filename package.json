@@ -29,9 +29,10 @@
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test": "mocha --ui tdd out/test/**/*.test.js",
-    "dev": "code --extensionDevelopmentPath=.",
-    "package": "vsce package",
-    "install:extension": "code --install-extension codepulse-0.0.1.vsix"
+    "predev": "npm run compile",
+    "dev": "node scripts/dev.js",
+    "package": "mkdir -p dist && vsce package --out dist/",
+    "install:extension": "code --install-extension dist/codepulse-0.0.1.vsix"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.0",
