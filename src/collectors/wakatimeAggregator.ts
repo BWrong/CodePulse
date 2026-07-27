@@ -34,7 +34,9 @@
      secondsByDate.set(day.range.date, day.grand_total.total_seconds);
      projectsByDate.set(
        day.range.date,
-       day.projects.map(p => ({ name: p.name, totalSeconds: p.total_seconds }))
+       day.projects
+        .filter(p => p.total_seconds > 0)
+        .map(p => ({ name: p.name, totalSeconds: p.total_seconds }))
      );
    }
 
@@ -55,6 +57,9 @@
      totalSeconds += day.grand_total.total_seconds;
 
      for (const project of day.projects) {
+       if (project.total_seconds === 0) {
+         continue;
+       }
        const current = projectMap.get(project.name) ?? 0;
        projectMap.set(project.name, current + project.total_seconds);
      }

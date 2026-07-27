@@ -317,16 +317,18 @@
     .project-bar-bg {
       grid-column: 1 / -1;
       height: 8px;
-      background: var(--border);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 4px;
       overflow: hidden;
     }
     .project-bar-fill {
       height: 100%;
       background: var(--accent);
-      border-radius: 4px;
+      border-radius: 3px;
       transition: width 0.4s ease;
       min-width: 2px;
+      box-shadow: 0 0 0 1px var(--accent-hover);
     }
     .project-name {
       font-size: 13px;
@@ -361,7 +363,7 @@
     .uplot-tooltip {
       position: absolute;
       z-index: 100;
-      background: var(--card-bg);
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 10px 12px;
@@ -397,9 +399,10 @@
       color: var(--fg);
       white-space: nowrap;
     }
-    .u-axis { color: var(--muted) !important; }
-    .u-label { color: var(--muted) !important; }
-    .u-title { color: var(--fg) !important; }
+    .u-axis { color: var(--fg) !important; }
+    .u-label { color: var(--fg) !important; }
+    .u-title { display: none !important; }
+    .u-legend { display: none !important; }
     .u-select { background: rgba(14, 99, 156, 0.1) !important; }
   </style>
 </head>
@@ -520,12 +523,12 @@
               <div class="stat-value">\${formatDuration(summary.totalSeconds)}</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">平均每天</div>
-              <div class="stat-value">\${formatDuration(summary.dailyAverageSeconds)}</div>
-            </div>
-            <div class="stat-card">
               <div class="stat-label">今天</div>
               <div class="stat-value">\${formatDuration(todaySeconds)}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">每天</div>
+              <div class="stat-value">\${formatDuration(summary.dailyAverageSeconds)}</div>
             </div>
             <div class="stat-card">
               <div class="stat-label">最活跃</div>
@@ -589,26 +592,24 @@
           height: 240,
           axes: [
             {
-              label: '日期',
-              labelSize: 24,
+              labelSize: 0,
               values: [
                 [3600 * 24 * 7, '{MM}-{DD}'],
                 [3600 * 24, '{MM}-{DD}'],
               ],
             },
             {
-              label: '编码时长（小时）',
-              labelSize: 28,
+              labelSize: 0,
               values: (u, splits) => splits.map(v => v.toFixed(1)),
             }
           ],
           series: [
-            { label: '日期' },
+            {},
             {
-              label: '编码时长',
               stroke: 'var(--accent)',
               fill: 'rgba(14, 99, 156, 0.15)',
               width: 2,
+              spline: true,
             }
           ],
           scales: { y: { auto: true } },
