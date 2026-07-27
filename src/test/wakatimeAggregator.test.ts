@@ -7,17 +7,18 @@
  }
 
  suite('aggregateSummaries', () => {
-   test('returns empty summary for empty response', async () => {
-     const response: WakaTimeSummariesResponse = { data: [] };
-     const { start, end } = dateRange('2026-07-20', '2026-07-26');
+  test('returns empty summary for empty response', () => {
+    const response: WakaTimeSummariesResponse = { data: [] };
+    const { start, end } = dateRange('2026-07-20', '2026-07-26');
 
-     const summary = aggregateSummaries(response, start, end);
+    const summary = aggregateSummaries(response, start, end);
 
-     assert.strictEqual(summary.totalSeconds, 0);
-     assert.strictEqual(summary.dailyAverageSeconds, 0);
-     assert.deepStrictEqual(summary.days, []);
-     assert.deepStrictEqual(summary.projects, []);
-   });
+    assert.strictEqual(summary.totalSeconds, 0);
+    assert.strictEqual(summary.dailyAverageSeconds, 0);
+    assert.strictEqual(summary.days.length, 7);
+    assert.ok(summary.days.every(d => d.totalSeconds === 0));
+    assert.deepStrictEqual(summary.projects, []);
+  });
 
    test('aggregates single day with single project', () => {
      const response: WakaTimeSummariesResponse = {
@@ -120,21 +121,47 @@
      assert.deepStrictEqual(summary.projects.map(p => p.name), ['large', 'small']);
    });
 
-   test('daily average is total over fixed window days', () => {
-     const response: WakaTimeSummariesResponse = {
-       data: [
-         {
-           grand_total: { hours: 2, minutes: 0, total_seconds: 7200 },
-           projects: [{ name: 'project-a', total_seconds: 7200 }],
-           range: { date: '2026-07-20' },
-         },
-       ],
-     };
-     const { start, end } = dateRange('2026-07-20', '2026-07-26');
+  test('daily average is total over fixed window days', () => {
+    const response: WakaTimeSummariesResponse = {
+      data: [
+        {
+          grand_total: { hours: 2, minutes: 0, total_seconds: 7200 },
+          projects: [{ name: 'project-a', total_seconds: 7200 }],
+          range: { date: '2026-07-20' },
+        },
+      ],
+    };
+    const { start, end } = dateRange('2026-07-20', '2026-07-26');
 
-     const summary = aggregateSummaries(response, start, end);
+    const summary = aggregateSummaries(response, start, end);
 
-     assert.strictEqual(summary.totalSeconds, 7200);
-     assert.strictEqual(summary.dailyAverageSeconds, 7200 / 7);
-   });
+    assert.strictEqual(summary.totalSeconds, 7200);
+    assert.strictEqual(summary.dailyAverageSeconds, Math.round(7200 / 7));
+  });
+
+  test('fills missing days with zero seconds', () => {
+    const response: WakaTimeSummariesResponse = {
+      data: [
+        {
+          grand_total: { hours: 1, minutes: 0, total_seconds: 3600 },
+          projects: [{ name: 'project-a', total_seconds: 3600 }],
+          range: { date: '2026-07-20' },
+        },
+      ],
+    };
+    const { start, end } = dateRange('2026-07-20', '2026-07-22');
+
+    const summary = aggregateSummaries(response, start, end);
+
+    assert.deepStrictEqual(
+      summary.days.map(d => ({ date: d.date, totalSeconds: d.totalSeconds })),
+      [
+        { date: '2026-07-20', totalSeconds: 3600 },
+        { date: '2026-07-21', totalSeconds: 0 },
+        { date: '2026-07-22', totalSeconds: 0 },
+      ]
+    );
+    assert.strictEqual(summary.totalSeconds, 3600);
+    assert.strictEqual(summary.dailyAverageSeconds, Math.round(3600 / 3));
+  });
  });

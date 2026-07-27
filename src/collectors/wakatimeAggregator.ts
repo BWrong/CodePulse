@@ -1,12 +1,6 @@
  import { CodingSummary, DailySummary, ProjectSummary } from '../models';
  import { WakaTimeSummariesResponse } from './wakatimeTypes';
-
- function formatDate(date: Date): string {
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, '0');
-   const day = String(date.getDate()).padStart(2, '0');
-   return `${year}-${month}-${day}`;
- }
+ import { formatDate } from '../utils/date';
 
  function daysBetweenInclusive(start: Date, end: Date): number {
    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
@@ -19,6 +13,12 @@
    return Math.round(value * 100) / 100;
  }
 
+ function addDays(date: Date, days: number): Date {
+   const result = new Date(date);
+   result.setDate(result.getDate() + days);
+   return result;
+ }
+
  export function aggregateSummaries(
    response: WakaTimeSummariesResponse,
    start: Date,
@@ -28,10 +28,19 @@
    const endDate = formatDate(end);
    const windowDays = daysBetweenInclusive(start, end);
 
-   const days: DailySummary[] = response.data.map(day => ({
-     date: day.range.date,
-     totalSeconds: day.grand_total.total_seconds,
-   }));
+   const secondsByDate = new Map<string, number>();
+   for (const day of response.data) {
+     secondsByDate.set(day.range.date, day.grand_total.total_seconds);
+   }
+
+   const days: DailySummary[] = [];
+   for (let i = 0; i < windowDays; i++) {
+     const date = formatDate(addDays(start, i));
+     days.push({
+       date,
+       totalSeconds: secondsByDate.get(date) ?? 0,
+     });
+   }
 
    const projectMap = new Map<string, number>();
    let totalSeconds = 0;
@@ -57,7 +66,7 @@
      startDate,
      endDate,
      totalSeconds,
-     dailyAverageSeconds: windowDays > 0 ? totalSeconds / windowDays : 0,
+     dailyAverageSeconds: windowDays > 0 ? Math.round(totalSeconds / windowDays) : 0,
      days,
      projects,
    };
