@@ -1,6 +1,7 @@
  export interface DailySummary {
    date: string;
    totalSeconds: number;
+   projects: { name: string; totalSeconds: number }[];
  }
 
  export interface ProjectSummary {

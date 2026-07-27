@@ -29,8 +29,13 @@
    const windowDays = daysBetweenInclusive(start, end);
 
    const secondsByDate = new Map<string, number>();
+   const projectsByDate = new Map<string, { name: string; totalSeconds: number }[]>();
    for (const day of response.data) {
      secondsByDate.set(day.range.date, day.grand_total.total_seconds);
+     projectsByDate.set(
+       day.range.date,
+       day.projects.map(p => ({ name: p.name, totalSeconds: p.total_seconds }))
+     );
    }
 
    const days: DailySummary[] = [];
@@ -39,6 +44,7 @@
      days.push({
        date,
        totalSeconds: secondsByDate.get(date) ?? 0,
+       projects: projectsByDate.get(date) ?? [],
      });
    }
 
