@@ -8,6 +8,28 @@
    return `${year}-${month}-${day}`;
  }
 
+ function friendlyErrorMessage(statusCode: number | undefined): string {
+   switch (statusCode) {
+     case 401:
+       return 'WakaTime API Key 无效，请检查 ~/.wakatime.cfg 中的 api_key。';
+     case 403:
+       return '没有权限访问 WakaTime 数据，请确认 API Key 已激活。';
+     case 404:
+       return '未找到 WakaTime 用户数据。';
+     case 429:
+       return 'WakaTime API 请求过于频繁，请稍后再试。';
+     case 500:
+     case 502:
+     case 503:
+     case 504:
+       return 'WakaTime 服务暂时不可用，请稍后再试。';
+     default:
+       return statusCode
+         ? `WakaTime API 返回错误 ${statusCode}，请检查网络或代理。`
+         : '无法连接到 WakaTime，请检查网络或代理。';
+   }
+ }
+
  export function fetchWakaTimeSummaries(
    apiKey: string,
    start: Date,
@@ -38,20 +60,16 @@
                try {
                  resolve(JSON.parse(data));
                } catch (error) {
-                 reject(new Error(`Failed to parse WakaTime response: ${error}`));
+                 reject(new Error(`解析 WakaTime 响应失败：${error}`));
                }
              } else {
-               reject(
-                 new Error(
-                   `WakaTime API returned ${res.statusCode}: ${data.slice(0, 200)}`
-                 )
-               );
+               reject(new Error(friendlyErrorMessage(res.statusCode)));
              }
            });
          }
        )
        .on('error', error => {
-         reject(error);
+         reject(new Error(`无法连接到 WakaTime，请检查网络或代理。(${error.message})`));
        });
    });
  }
