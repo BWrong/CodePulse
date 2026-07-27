@@ -1,11 +1,19 @@
  import * as vscode from 'vscode';
  import { CodingSummary, TimeCollector } from './models';
+ import { getLastRecordedDate, markTodayAsRecorded } from './extension';
 
- type RangeDays = 7 | 30 | 90;
+ export type RangeDays = 7 | 30 | 90;
 
- interface DashboardMessage {
+ export interface DashboardMessage {
    command: string;
    days?: RangeDays;
+ }
+
+ export interface DashboardState {
+   extensionUri: vscode.Uri;
+   collector: TimeCollector;
+   globalState: vscode.Memento;
+   onDataUpdated?: (summary: CodingSummary) => void;
  }
 
  export class DashboardPanel {
@@ -14,11 +22,15 @@
    private static currentPanel: DashboardPanel | undefined;
    private readonly panel: vscode.WebviewPanel;
    private readonly collector: TimeCollector;
+   private readonly globalState: vscode.Memento;
+   private readonly onDataUpdated?: (summary: CodingSummary) => void;
    private currentDays: RangeDays = 7;
    private isLoading = false;
 
-   private constructor(extensionUri: vscode.Uri, collector: TimeCollector) {
-     this.collector = collector;
+   private constructor(extensionUri: vscode.Uri, state: DashboardState) {
+     this.collector = state.collector;
+     this.globalState = state.globalState;
+     this.onDataUpdated = state.onDataUpdated;
      this.panel = vscode.window.createWebviewPanel(
        DashboardPanel.viewType,
        'CodePulse',
@@ -35,14 +47,21 @@
 
    public static createOrShow(
      extensionUri: vscode.Uri,
-     collector: TimeCollector
+     collector: TimeCollector,
+     globalState: vscode.Memento,
+     onDataUpdated?: (summary: CodingSummary) => void
    ): DashboardPanel {
      if (DashboardPanel.currentPanel) {
        DashboardPanel.currentPanel.panel.reveal(vscode.ViewColumn.One);
        return DashboardPanel.currentPanel;
      }
 
-     const panel = new DashboardPanel(extensionUri, collector);
+     const panel = new DashboardPanel(extensionUri, {
+       extensionUri,
+       collector,
+       globalState,
+       onDataUpdated,
+     });
      DashboardPanel.currentPanel = panel;
 
      panel.panel.onDidDispose(() => {
@@ -56,6 +75,8 @@
      this.panel.webview.onDidReceiveMessage(async (message: DashboardMessage) => {
        switch (message.command) {
          case 'ready':
+           await this.sendInitialState();
+           break;
          case 'refresh':
            await this.loadAndSendData();
            break;
@@ -65,8 +86,23 @@
              await this.loadAndSendData();
            }
            break;
+         case 'markRecorded':
+           markTodayAsRecorded(this.globalState);
+           this.panel.webview.postMessage({
+             command: 'lastRecordedDate',
+             date: getLastRecordedDate(this.globalState),
+           });
+           break;
        }
      });
+   }
+
+   private async sendInitialState(): Promise<void> {
+     this.panel.webview.postMessage({
+       command: 'lastRecordedDate',
+       date: getLastRecordedDate(this.globalState),
+     });
+     await this.loadAndSendData();
    }
 
    private async loadAndSendData(): Promise<void> {
@@ -84,6 +120,7 @@
          days: this.currentDays,
          summary,
        });
+       this.onDataUpdated?.(summary);
      } catch (error) {
        const message = error instanceof Error ? error.message : String(error);
        this.panel.webview.postMessage({ command: 'error', message });
@@ -138,7 +175,7 @@
        display: flex;
        justify-content: space-between;
        align-items: center;
-       margin-bottom: 20px;
+       margin-bottom: 16px;
        gap: 16px;
        flex-wrap: wrap;
      }
@@ -174,9 +211,18 @@
        border-radius: 4px;
        font-size: 13px;
      }
+     button.secondary {
+       background: transparent;
+       color: var(--fg);
+     }
      button:disabled {
        opacity: 0.5;
        cursor: not-allowed;
+     }
+     .record-marker {
+       font-size: 12px;
+       opacity: 0.8;
+       margin-bottom: 16px;
      }
      .stats {
        display: grid;
@@ -241,6 +287,14 @@
        opacity: 0.8;
      }
      .error { color: var(--vscode-errorForeground, #f48771); }
+     .wakatime-link {
+       font-size: 12px;
+       color: var(--vscode-textLink-foreground, #3794ff);
+       text-decoration: none;
+     }
+     .wakatime-link:hover {
+       text-decoration: underline;
+     }
      .hidden { display: none !important; }
    </style>
  </head>
@@ -253,8 +307,16 @@
        <button class="tab" data-days="90">90 天</button>
      </div>
      <div class="actions">
+       <button id="markRecorded" class="secondary">标记今天已记录</button>
        <button id="refresh">刷新</button>
      </div>
+   </div>
+
+   <div class="record-marker">
+     <span id="lastRecorded">上次记录日期：未标记</span>
+     <span style="margin-left: 16px;">
+       <a class="wakatime-link" href="https://wakatime.com/" target="_blank">打开 WakaTime ↗</a>
+     </span>
    </div>
 
    <div id="content">
@@ -271,6 +333,8 @@
        const contentEl = document.getElementById('content');
        const tabEls = document.querySelectorAll('.tab');
        const refreshBtn = document.getElementById('refresh');
+       const markRecordedBtn = document.getElementById('markRecorded');
+       const lastRecordedEl = document.getElementById('lastRecorded');
 
        function formatDuration(seconds) {
          const hours = Math.floor(seconds / 3600);
@@ -279,6 +343,14 @@
            return mins > 0 ? \`\${hours}h \${mins}m\` : \`\${hours}h\`;
          }
          return \`\${mins}m\`;
+       }
+
+       function updateLastRecordedDate(date) {
+         if (date) {
+           lastRecordedEl.textContent = \`上次记录日期：\${date}\`;
+         } else {
+           lastRecordedEl.textContent = '上次记录日期：未标记';
+         }
        }
 
        function renderLoading() {
@@ -394,6 +466,10 @@
          vscode.postMessage({ command: 'refresh' });
        });
 
+       markRecordedBtn.addEventListener('click', () => {
+         vscode.postMessage({ command: 'markRecorded' });
+       });
+
        window.addEventListener('message', event => {
          const message = event.data;
          switch (message.command) {
@@ -406,6 +482,9 @@
              break;
            case 'error':
              renderError(message.message);
+             break;
+           case 'lastRecordedDate':
+             updateLastRecordedDate(message.date);
              break;
          }
        });
