@@ -11,6 +11,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "onCommand:codepulse.openDashboard"
   ],
   "main": "./out/extension.js",
@@ -49,7 +50,5 @@
     "type": "git",
     "url": "https://github.com/BWrong/CodePulse.git"
   },
-  "dependencies": {
-    "uplot": "^1.6.32"
-  }
+  "dependencies": {}
 }

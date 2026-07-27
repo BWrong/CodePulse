@@ -2,8 +2,7 @@
  import { DashboardPanel } from './dashboard';
  import { createWakaTimeCollector } from './collectors/wakatimeCollector';
  import { TimeCollector } from './models';
-
- const LAST_RECORDED_DATE_KEY = 'lastRecordedDate';
+ import { LAST_RECORDED_DATE_KEY, markTodayAsRecorded } from './recordedDate';
 
  export function activate(context: vscode.ExtensionContext): void {
    context.globalState.setKeysForSync([LAST_RECORDED_DATE_KEY]);
@@ -25,19 +24,33 @@
          );
          return;
        }
-       DashboardPanel.createOrShow(context.extensionUri, collector, context.globalState);
+       DashboardPanel.createOrShow(
+         context.extensionUri,
+         collector,
+         context.globalState,
+         () => updateStatusBar(statusBarItem, collector)
+       );
      }
    );
 
    const markRecordedCommand = vscode.commands.registerCommand(
      'codepulse.markTodayAsRecorded',
-     () => {
-       markTodayAsRecorded(context.globalState);
+     async () => {
+       await markTodayAsRecorded(context.globalState);
        vscode.window.showInformationMessage('已标记今天为已记录');
      }
    );
 
    context.subscriptions.push(openDashboardCommand, markRecordedCommand);
+
+   const statusBarRefreshInterval = setInterval(() => {
+     if (collector) {
+       updateStatusBar(statusBarItem, collector);
+     }
+   }, 5 * 60 * 1000);
+   context.subscriptions.push({
+     dispose: () => clearInterval(statusBarRefreshInterval),
+   });
 
    if (collector) {
      updateStatusBar(statusBarItem, collector);
@@ -64,6 +77,7 @@
      statusBarItem.text = '$(pulse) CodePulse';
      statusBarItem.tooltip = 'CodePulse: 点击打开面板';
      statusBarItem.show();
+     console.error('[CodePulse] updateStatusBar failed:', error);
    }
  }
 
@@ -74,13 +88,4 @@
      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
    }
    return `${mins}m`;
- }
-
- export function markTodayAsRecorded(globalState: vscode.Memento): void {
-   const today = new Date().toISOString().split('T')[0];
-   globalState.update(LAST_RECORDED_DATE_KEY, today);
- }
-
- export function getLastRecordedDate(globalState: vscode.Memento): string | undefined {
-   return globalState.get<string>(LAST_RECORDED_DATE_KEY);
  }

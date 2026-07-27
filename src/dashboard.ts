@@ -1,12 +1,13 @@
  import * as vscode from 'vscode';
  import { CodingSummary, TimeCollector } from './models';
- import { getLastRecordedDate, markTodayAsRecorded } from './extension';
+ import { getLastRecordedDate, markTodayAsRecorded } from './recordedDate';
 
  export type RangeDays = 7 | 30 | 90;
 
  export interface DashboardMessage {
-   command: string;
+   command: 'ready' | 'refresh' | 'changeRange' | 'markRecorded' | 'openExternal';
    days?: RangeDays;
+   url?: string;
  }
 
  export interface DashboardState {
@@ -87,11 +88,16 @@
            }
            break;
          case 'markRecorded':
-           markTodayAsRecorded(this.globalState);
+           await markTodayAsRecorded(this.globalState);
            this.panel.webview.postMessage({
              command: 'lastRecordedDate',
              date: getLastRecordedDate(this.globalState),
            });
+           break;
+         case 'openExternal':
+           if (message.url) {
+             await vscode.env.openExternal(vscode.Uri.parse(message.url));
+           }
            break;
        }
      });
@@ -315,7 +321,7 @@
    <div class="record-marker">
      <span id="lastRecorded">上次记录日期：未标记</span>
      <span style="margin-left: 16px;">
-       <a class="wakatime-link" href="https://wakatime.com/" target="_blank">打开 WakaTime ↗</a>
+       <a class="wakatime-link" href="#" id="openWakaTime">打开 WakaTime ↗</a>
      </span>
    </div>
 
@@ -359,8 +365,12 @@
        }
 
        function renderError(message) {
-         contentEl.innerHTML = \`<div class="error">加载失败：\${escapeHtml(message)}</div>\`;
+         contentEl.innerHTML = \`<div class="error">加载失败：\${escapeHtml(message)}<br><button id="retryError" class="secondary" style="margin-top: 12px;">重试</button></div>\`;
          refreshBtn.disabled = false;
+         const retryErrorBtn = document.getElementById('retryError');
+         retryErrorBtn?.addEventListener('click', () => {
+           vscode.postMessage({ command: 'refresh' });
+         });
        }
 
        function renderEmpty() {
@@ -468,6 +478,12 @@
 
        markRecordedBtn.addEventListener('click', () => {
          vscode.postMessage({ command: 'markRecorded' });
+       });
+
+       const openWakaTimeLink = document.getElementById('openWakaTime');
+       openWakaTimeLink?.addEventListener('click', (event) => {
+         event.preventDefault();
+         vscode.postMessage({ command: 'openExternal', url: 'https://wakatime.com/' });
        });
 
        window.addEventListener('message', event => {

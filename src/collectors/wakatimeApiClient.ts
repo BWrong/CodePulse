@@ -1,12 +1,6 @@
  import * as https from 'https';
  import { WakaTimeSummariesResponse } from './wakatimeTypes';
-
- function formatDate(date: Date): string {
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, '0');
-   const day = String(date.getDate()).padStart(2, '0');
-   return `${year}-${month}-${day}`;
- }
+ import { formatDate } from '../utils/date';
 
  function friendlyErrorMessage(statusCode: number | undefined): string {
    switch (statusCode) {
@@ -41,7 +35,7 @@
    const auth = Buffer.from(`${apiKey}:`).toString('base64');
 
    return new Promise((resolve, reject) => {
-     https
+     const req = https
        .get(
          url,
          {
@@ -71,5 +65,9 @@
        .on('error', error => {
          reject(new Error(`无法连接到 WakaTime，请检查网络或代理。(${error.message})`));
        });
+
+     req.setTimeout(15000, () => {
+       req.destroy(new Error('请求 WakaTime 超时，请检查网络或代理。'));
+     });
    });
  }
