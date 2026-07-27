@@ -355,6 +355,52 @@
     }
     .hidden { display: none !important; }
 
+    .unrecorded-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .unrecorded-main {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 160px;
+      flex: 0 0 auto;
+    }
+    .unrecorded-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .unrecorded-total {
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .unrecorded-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .unrecorded-list {
+      flex: 1 1 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 280px;
+    }
+    .unrecorded-empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 12px 0;
+    }
+
     /* uPlot customizations */
     #chart {
       width: 100%;
@@ -438,6 +484,7 @@
       let currentDays = 7;
       let chart = null;
       let chartResizeHandler = null;
+      let currentLastRecordedDate = null;
 
       const contentEl = document.getElementById('content');
       const tabEls = document.querySelectorAll('.tab');
@@ -473,7 +520,39 @@
         return projects[0];
       }
 
+      function getUnrecordedProjects(summary, lastRecordedDate) {
+        if (!lastRecordedDate || !summary || !summary.days) {
+          return null;
+        }
+        const recordedDate = lastRecordedDate.slice(0, 10);
+        const unrecordedDays = summary.days.filter(d => d.date > recordedDate);
+        if (unrecordedDays.length === 0) {
+          return { totalSeconds: 0, projects: [] };
+        }
+
+        const projectMap = new Map();
+        let totalSeconds = 0;
+        for (const day of unrecordedDays) {
+          totalSeconds += day.totalSeconds;
+          for (const project of day.projects || []) {
+            const current = projectMap.get(project.name) ?? 0;
+            projectMap.set(project.name, current + project.totalSeconds);
+          }
+        }
+
+        const projects = Array.from(projectMap.entries())
+          .map(([name, projectSeconds]) => ({
+            name,
+            totalSeconds: projectSeconds,
+            percent: totalSeconds > 0 ? Math.round((projectSeconds / totalSeconds) * 100 * 100) / 100 : 0,
+          }))
+          .sort((a, b) => b.totalSeconds - a.totalSeconds);
+
+        return { totalSeconds, projects };
+      }
+
       function updateLastRecordedDate(date) {
+        currentLastRecordedDate = date ?? null;
         if (date) {
           lastRecordedEl.textContent = \`上次记录时间：\${date}\`;
         } else {
@@ -539,6 +618,9 @@
           </div>
         \`;
 
+        const unrecorded = getUnrecordedProjects(summary, currentLastRecordedDate);
+        const unrecordedHtml = renderUnrecordedSection(unrecorded);
+
         const chartHtml = '<div class="section"><div class="section-title">每日趋势</div><div id="chart"></div></div>';
 
         const projectsHtml = summary.projects.length > 0
@@ -560,9 +642,60 @@
           \`
           : '';
 
-        contentEl.innerHTML = statsHtml + chartHtml + projectsHtml;
+        contentEl.innerHTML = statsHtml + unrecordedHtml + chartHtml + projectsHtml;
 
         renderChart(summary.days);
+      }
+
+      function renderUnrecordedSection(unrecorded) {
+        if (!unrecorded) {
+          return \`
+            <div class="unrecorded-section">
+              <div class="unrecorded-main">
+                <div class="unrecorded-label">未记录项目</div>
+                <div class="unrecorded-empty">尚未记录过，点击顶部"记录完成"按钮开始</div>
+              </div>
+            </div>
+          \`;
+        }
+
+        if (unrecorded.totalSeconds === 0) {
+          return \`
+            <div class="unrecorded-section">
+              <div class="unrecorded-main">
+                <div class="unrecorded-label">未记录项目</div>
+                <div class="unrecorded-total">0m</div>
+                <div class="unrecorded-sub">上次记录时间：\${escapeHtml(currentLastRecordedDate)}</div>
+              </div>
+              <div class="unrecorded-list">
+                <div class="unrecorded-empty">暂无未记录时长</div>
+              </div>
+            </div>
+          \`;
+        }
+
+        const listHtml = unrecorded.projects.map(p => \`
+          <div class="project-item">
+            <span class="project-name">\${escapeHtml(p.name)}</span>
+            <span class="project-time">\${formatDuration(p.totalSeconds)} (\${p.percent}%)</span>
+            <div class="project-bar-bg">
+              <div class="project-bar-fill" style="width: \${Math.max(p.percent, 0.5)}%"></div>
+            </div>
+          </div>
+        \`).join('');
+
+        return \`
+          <div class="unrecorded-section">
+            <div class="unrecorded-main">
+              <div class="unrecorded-label">未记录项目</div>
+              <div class="unrecorded-total">\${formatDuration(unrecorded.totalSeconds)}</div>
+              <div class="unrecorded-sub">上次记录时间：\${escapeHtml(currentLastRecordedDate)}</div>
+            </div>
+            <div class="unrecorded-list">
+              \${listHtml}
+            </div>
+          </div>
+        \`;
       }
 
       function renderChart(days) {
@@ -711,6 +844,9 @@
             break;
           case 'update':
             currentDays = message.days;
+            if (message.lastRecordedDate !== undefined) {
+              updateLastRecordedDate(message.lastRecordedDate);
+            }
             renderSummary(message.days, message.summary);
             break;
           case 'error':
