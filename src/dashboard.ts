@@ -324,11 +324,11 @@
     }
     .project-bar-fill {
       height: 100%;
-      background: var(--accent);
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
       border-radius: 3px;
       transition: width 0.4s ease;
       min-width: 2px;
-      box-shadow: 0 0 0 1px var(--accent-hover);
+      box-shadow: 0 0 0 1px var(--accent-hover), 0 0 6px 0 var(--accent-hover);
     }
     .project-name {
       font-size: 13px;
