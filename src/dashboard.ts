@@ -531,6 +531,15 @@
         currentLastRecordedDate = date ?? null;
       }
 
+      function filterProjectsByMinDuration(projects, minSeconds) {
+        const filtered = (projects || []).filter(p => p.totalSeconds >= minSeconds);
+        const totalSeconds = filtered.reduce((sum, p) => sum + p.totalSeconds, 0);
+        return filtered.map(p => ({
+          ...p,
+          percent: totalSeconds > 0 ? Math.round((p.totalSeconds / totalSeconds) * 100 * 100) / 100 : 0,
+        }));
+      }
+
       function renderLoading() {
         contentEl.innerHTML = '<div class="loading">加载中…</div>';
         refreshBtn.disabled = true;
@@ -565,7 +574,7 @@
         }
 
         const todaySeconds = getTodaySeconds(summary.days);
-        const mostActive = getMostActiveProject(summary.projects);
+        const mostActive = getMostActiveProject(filteredProjects);
 
         const statsHtml = \`
           <div class="stats">
@@ -589,17 +598,23 @@
           </div>
         \`;
 
+        const filteredProjects = filterProjectsByMinDuration(summary.projects, 60);
+        const mostActive = getMostActiveProject(filteredProjects);
+
         const unrecorded = getUnrecordedProjects(summary, currentLastRecordedDate);
+        if (unrecorded) {
+          unrecorded.projects = filterProjectsByMinDuration(unrecorded.projects, 60);
+        }
         const unrecordedHtml = renderUnrecordedSection(unrecorded);
 
         const chartHtml = '<div class="section"><div class="section-title">每日趋势</div><div id="chart"></div></div>';
 
-        const projectsHtml = summary.projects.length > 0
+        const projectsHtml = filteredProjects.length > 0
           ? \`
             <div class="section">
               <div class="section-title">项目视图</div>
               <div class="project-list">
-                \${summary.projects.map(p => \`
+                \${filteredProjects.map(p => \`
                   <div class="project-item">
                     <span class="project-name">\${escapeHtml(p.name)}</span>
                     <span class="project-time">\${formatDuration(p.totalSeconds)} (\${p.percent}%)</span>
