@@ -378,6 +378,40 @@
       padding: 12px 0;
     }
 
+    .info-icon {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 4px;
+      color: var(--muted);
+      cursor: help;
+      vertical-align: middle;
+      opacity: 0.7;
+      position: relative;
+    }
+    .info-icon:hover {
+      opacity: 1;
+    }
+    .info-icon::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--vscode-editorHoverWidget-background, #333);
+      color: var(--vscode-editorHoverWidget-foreground, #fff);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.15s;
+      pointer-events: none;
+    }
+    .info-icon:hover::after {
+      opacity: 1;
+    }
+
     /* uPlot customizations */
     #chart {
       width: 100%;
@@ -456,6 +490,7 @@
       let chart = null;
       let chartResizeHandler = null;
       let currentLastRecordedDate = null;
+      let lastSummary = null;
 
       const contentEl = document.getElementById('content');
       const tabEls = document.querySelectorAll('.tab');
@@ -485,17 +520,20 @@
         return found ? found.totalSeconds : 0;
       }
 
-      function getMostActiveProject(projects) {
-        if (!projects || projects.length === 0) return null;
-        return projects[0];
+      function getMostActiveDay(days) {
+        if (!days || days.length === 0) return null;
+        return days.reduce((max, day) => (day.totalSeconds > max.totalSeconds ? day : max), days[0]);
       }
 
      function getUnrecordedProjects(summary, lastRecordedDate) {
         if (!summary || !summary.days) {
           return null;
         }
-        const recordedDate = lastRecordedDate ? lastRecordedDate.slice(0, 10) : null;
-        const unrecordedDays = recordedDate ? summary.days.filter(d => d.date > recordedDate) : summary.days;
+        if (!lastRecordedDate) {
+          return null;
+        }
+        const recordedDate = lastRecordedDate.slice(0, 10);
+        const unrecordedDays = summary.days.filter(d => d.date >= recordedDate);
        if (unrecordedDays.length === 0) {
          return { totalSeconds: 0, projects: [] };
        }
@@ -534,6 +572,43 @@
         }));
       }
 
+      function computeUnrecorded(summary, lastRecordedDate) {
+        const unrecorded = getUnrecordedProjects(summary, lastRecordedDate);
+        if (!unrecorded) {
+          return null;
+        }
+        unrecorded.projects = filterProjectsByMinDuration(unrecorded.projects, 60);
+        unrecorded.totalSeconds = unrecorded.projects.reduce((sum, p) => sum + p.totalSeconds, 0);
+        return unrecorded;
+      }
+
+      function getDataEndDate(lastRecordedDate) {
+        if (!lastRecordedDate) {
+          return null;
+        }
+        const d = new Date(lastRecordedDate.slice(0, 10) + 'T00:00:00');
+        d.setDate(d.getDate() - 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+      }
+
+      function updateUnrecordedOnly() {
+        if (!lastSummary) {
+          return;
+        }
+        const wrapper = document.getElementById('unrecorded-wrapper');
+        if (!wrapper) {
+          return;
+        }
+        wrapper.innerHTML = renderUnrecordedSection(computeUnrecorded(lastSummary, currentLastRecordedDate));
+      }
+
+      function dayFilteredSeconds(day) {
+        return (day.projects || []).filter(p => p.totalSeconds >= 60).reduce((sum, p) => sum + p.totalSeconds, 0);
+      }
+
       function renderLoading() {
         contentEl.innerHTML = '<div class="loading">加载中…</div>';
         refreshBtn.disabled = true;
@@ -569,7 +644,8 @@
 
         const todaySeconds = getTodaySeconds(summary.days);
         const filteredProjects = filterProjectsByMinDuration(summary.projects, 60);
-        const mostActive = getMostActiveProject(filteredProjects);
+        lastSummary = summary;
+        const mostActive = getMostActiveDay(summary.days);
 
         const statsHtml = \`
           <div class="stats">
@@ -588,15 +664,12 @@
             <div class="stat-card">
               <div class="stat-label">最活跃</div>
               <div class="stat-value">\${mostActive ? formatDuration(mostActive.totalSeconds) : '0m'}</div>
-              <div class="stat-sub">\${mostActive ? escapeHtml(mostActive.name) : '暂无项目'}</div>
+              <div class="stat-sub">\${mostActive ? escapeHtml(mostActive.date) : '暂无数据'}</div>
             </div>
           </div>
         \`;
 
-        const unrecorded = getUnrecordedProjects(summary, currentLastRecordedDate);
-        if (unrecorded) {
-          unrecorded.projects = filterProjectsByMinDuration(unrecorded.projects, 60);
-        }
+        const unrecorded = computeUnrecorded(summary, currentLastRecordedDate);
         const unrecordedHtml = renderUnrecordedSection(unrecorded);
 
         const chartHtml = '<div class="section"><div class="section-title">每日趋势</div><div id="chart"></div></div>';
@@ -620,7 +693,7 @@
           \`
           : '';
 
-        contentEl.innerHTML = statsHtml + unrecordedHtml + chartHtml + projectsHtml;
+        contentEl.innerHTML = statsHtml + '<div id="unrecorded-wrapper">' + unrecordedHtml + '</div>' + chartHtml + projectsHtml;
 
         renderChart(summary.days);
       }
@@ -641,7 +714,7 @@
           return \`
             <div class="unrecorded-section">
               <div class="unrecorded-main">
-                <div class="unrecorded-label">未记录项目</div>
+                <div class="unrecorded-label">未记录项目<span class="info-icon" data-tip="数据截止时间：\${getDataEndDate(currentLastRecordedDate) || '无'}">ⓘ</span></div>
                <div class="unrecorded-total">0m</div>
                 <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击顶部“记录完成”按钮开始'}</div>
              </div>
@@ -665,7 +738,7 @@
         return \`
           <div class="unrecorded-section">
             <div class="unrecorded-main">
-              <div class="unrecorded-label">未记录项目</div>
+              <div class="unrecorded-label">未记录项目<span class="info-icon" data-tip="数据截止时间：\${getDataEndDate(currentLastRecordedDate) || '无'}">ⓘ</span></div>
              <div class="unrecorded-total">\${formatDuration(unrecorded.totalSeconds)}</div>
               <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击顶部“记录完成”按钮开始'}</div>
            </div>
@@ -693,7 +766,7 @@
         }
 
         const timestamps = days.map(d => new Date(d.date + 'T00:00:00').getTime() / 1000);
-        const values = days.map(d => d.totalSeconds / 3600);
+        const values = days.map(d => dayFilteredSeconds(d) / 3600);
 
         // Remove existing tooltip if any
         const oldTooltip = document.querySelector('.uplot-tooltip');
@@ -744,7 +817,7 @@
                 }
                 const day = days[idx];
                 const projectRows = (day.projects || [])
-                  .filter(p => p.totalSeconds > 0)
+                  .filter(p => p.totalSeconds >= 60)
                   .sort((a, b) => b.totalSeconds - a.totalSeconds)
                   .map(p => \`
                     <div class="uplot-tooltip-row">
@@ -758,7 +831,7 @@
                   \${projectRows}
                   <div class="uplot-tooltip-row total">
                     <span class="uplot-tooltip-label">合计</span>
-                    <span class="uplot-tooltip-value">\${formatDuration(day.totalSeconds)}</span>
+                    <span class="uplot-tooltip-value">\${formatDuration(dayFilteredSeconds(day))}</span>
                   </div>
                 \`;
 
@@ -826,6 +899,12 @@
               updateLastRecordedDate(message.lastRecordedDate);
             }
             renderSummary(message.days, message.summary);
+            break;
+          case 'recordedUpdated':
+            if (message.lastRecordedDate !== undefined) {
+              updateLastRecordedDate(message.lastRecordedDate);
+            }
+            updateUnrecordedOnly();
             break;
           case 'error':
             renderError(message.message);

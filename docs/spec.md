@@ -51,10 +51,11 @@
  - **采集器抽象**：定义 `TimeCollector` 接口，例如 `getSummaries(start: Date, end: Date)`，返回规范化的汇总数据结构。首个实现为 `WakaTimeCollector`。
  - **WakaTime 采集器**：从 `~/.wakatime.cfg` 的 `[settings]` 段读取 `api_key`，使用 HTTP Basic Auth 请求 `https://wakatime.com/api/v1/users/current/summaries`。
  - **Dashboard Webview**：单个 Webview 面板，顶部有全局 7/30/90 tab 切换。使用原生 HTML/CSS/TypeScript 和 uPlot 绘制柱状图。数据通过 `postMessage` 传递。
+ - **趋势图过滤**：每日时长按「当天 ≥1 分钟项目之和」计算，<1 分钟的项目不纳入趋势线与 tooltip，与项目视图、未记录模块口径一致。
  - **数据聚合**：扩展宿主在把数据发给 Webview 前，先对 WakaTime 返回的每日数据按天和按项目做聚合。
  - **状态栏**：状态栏项显示今日编码时长，格式为 `Xh Ym`，点击打开面板。
  - **抄表标记**：`lastRecordedDate` 以 ISO 日期字符串形式存储在 `ExtensionContext.globalState` 中。激活时调用 `globalState.setKeysForSync(['lastRecordedDate'])`，使其参与 VS Code 设置同步。
- - **未记录项目模块**：Dashboard Webview 在已加载的 7/30/90 天数据中，过滤出 `date > lastRecordedDate 日期部分` 的天，按项目累计未记录时长，按降序展示项目列表、占比和进度条。模块位于统计卡片之后、趋势图之前，采用卡片式布局，左侧显示未记录总时长，右侧显示项目列表。未记录时长为 0 或 `lastRecordedDate` 为空时显示对应空状态。
+ - **未记录项目模块**：Dashboard Webview 在已加载的 7/30/90 天数据中，过滤出 `date >= lastRecordedDate 日期部分` 的天（记录日当天也算未记录，因为记录后用户可能继续编码），按项目累计未记录时长，按降序展示项目列表、占比和进度条。模块位于统计卡片之后、趋势图之前，采用卡片式布局，左侧显示未记录总时长，右侧显示项目列表。未记录时长为 0 或 `lastRecordedDate` 为空时显示对应空状态。模块显示「上次记录时间」（记录完成的时刻）；「数据截止时间」（`lastRecordedDate` 日期部分的前一天，即已抄表数据实际截止日）以「未记录项目」标题旁的 info 图标 hover tooltip 展示。
  - **不缓存数据**：面板每次打开或手动刷新都会重新请求 WakaTime API，MVP 不实现本地缓存。
  - **暂不同步腾讯文档**：MVP 明确不包含向腾讯文档推送数据，用户继续从项目列表手动复制数值。
  - **不做项目映射**：由于用户是一仓库一项目，直接使用 WakaTime 项目名。
