@@ -89,10 +89,7 @@
            break;
          case 'markRecorded':
            await markTodayAsRecorded(this.globalState);
-           this.panel.webview.postMessage({
-             command: 'lastRecordedDate',
-             date: getLastRecordedDate(this.globalState),
-           });
+           await this.loadAndSendData();
            break;
          case 'openExternal':
            if (message.url) {
@@ -104,10 +101,6 @@
    }
 
    private async sendInitialState(): Promise<void> {
-     this.panel.webview.postMessage({
-       command: 'lastRecordedDate',
-       date: getLastRecordedDate(this.globalState),
-     });
      await this.loadAndSendData();
    }
 
@@ -125,6 +118,7 @@
          command: 'update',
          days: this.currentDays,
          summary,
+         lastRecordedDate: getLastRecordedDate(this.globalState),
        });
        this.onDataUpdated?.(summary);
      } catch (error) {
@@ -496,15 +490,15 @@
         return projects[0];
       }
 
-      function getUnrecordedProjects(summary, lastRecordedDate) {
-        if (!lastRecordedDate || !summary || !summary.days) {
+     function getUnrecordedProjects(summary, lastRecordedDate) {
+        if (!summary || !summary.days) {
           return null;
         }
-        const recordedDate = lastRecordedDate.slice(0, 10);
-        const unrecordedDays = summary.days.filter(d => d.date > recordedDate);
-        if (unrecordedDays.length === 0) {
-          return { totalSeconds: 0, projects: [] };
-        }
+        const recordedDate = lastRecordedDate ? lastRecordedDate.slice(0, 10) : null;
+        const unrecordedDays = recordedDate ? summary.days.filter(d => d.date > recordedDate) : summary.days;
+       if (unrecordedDays.length === 0) {
+         return { totalSeconds: 0, projects: [] };
+       }
 
         const projectMap = new Map();
         let totalSeconds = 0;
@@ -648,9 +642,9 @@
             <div class="unrecorded-section">
               <div class="unrecorded-main">
                 <div class="unrecorded-label">未记录项目</div>
-                <div class="unrecorded-total">0m</div>
-                <div class="unrecorded-sub">上次记录时间：\${escapeHtml(currentLastRecordedDate)}</div>
-              </div>
+               <div class="unrecorded-total">0m</div>
+                <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击顶部“记录完成”按钮开始'}</div>
+             </div>
               <div class="unrecorded-list">
                 <div class="unrecorded-empty">暂无未记录时长</div>
               </div>
@@ -672,9 +666,9 @@
           <div class="unrecorded-section">
             <div class="unrecorded-main">
               <div class="unrecorded-label">未记录项目</div>
-              <div class="unrecorded-total">\${formatDuration(unrecorded.totalSeconds)}</div>
-              <div class="unrecorded-sub">上次记录时间：\${escapeHtml(currentLastRecordedDate)}</div>
-            </div>
+             <div class="unrecorded-total">\${formatDuration(unrecorded.totalSeconds)}</div>
+              <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击顶部“记录完成”按钮开始'}</div>
+           </div>
             <div class="unrecorded-list">
               \${listHtml}
             </div>
