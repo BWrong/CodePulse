@@ -1,6 +1,6 @@
 {
-  "name": "codepulse",
-  "displayName": "CodePulse",
+  "name": "codepulse-statistics",
+  "displayName": "CodePulse|Code Statistics",
   "description": "在 VS Code 内查看按项目汇总的编码时间",
   "version": "0.0.1",
   "publisher": "BWrong",
