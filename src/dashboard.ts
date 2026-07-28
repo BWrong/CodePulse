@@ -243,15 +243,6 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
-    .record-marker {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -345,14 +336,6 @@
       color: var(--muted);
     }
     .error { color: var(--error); }
-    .wakatime-link {
-      font-size: 12px;
-      color: var(--link);
-      text-decoration: none;
-    }
-    .wakatime-link:hover {
-      text-decoration: underline;
-    }
     .hidden { display: none !important; }
 
     .unrecorded-section {
@@ -462,15 +445,9 @@
     </div>
     <div class="actions">
       <button id="markRecorded" class="secondary">记录完成</button>
+      <button id="openWakaTime" class="secondary">WakaTime</button>
       <button id="refresh">刷新</button>
     </div>
-  </div>
-
-  <div class="record-marker">
-    <span id="lastRecorded">上次记录时间：未标记</span>
-    <span>
-      <a class="wakatime-link" href="#" id="openWakaTime">打开 WakaTime ↗</a>
-    </span>
   </div>
 
   <div id="content">
@@ -490,7 +467,6 @@
       const tabEls = document.querySelectorAll('.tab');
       const refreshBtn = document.getElementById('refresh');
       const markRecordedBtn = document.getElementById('markRecorded');
-      const lastRecordedEl = document.getElementById('lastRecorded');
 
       function formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -553,11 +529,6 @@
 
       function updateLastRecordedDate(date) {
         currentLastRecordedDate = date ?? null;
-        if (date) {
-          lastRecordedEl.textContent = \`上次记录时间：\${date}\`;
-        } else {
-          lastRecordedEl.textContent = '上次记录时间：未标记';
-        }
       }
 
       function renderLoading() {
@@ -851,9 +822,6 @@
             break;
           case 'error':
             renderError(message.message);
-            break;
-          case 'lastRecordedDate':
-            updateLastRecordedDate(message.date);
             break;
         }
       });
