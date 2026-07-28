@@ -574,6 +574,7 @@
         }
 
         const todaySeconds = getTodaySeconds(summary.days);
+        const filteredProjects = filterProjectsByMinDuration(summary.projects, 60);
         const mostActive = getMostActiveProject(filteredProjects);
 
         const statsHtml = \`
@@ -597,9 +598,6 @@
             </div>
           </div>
         \`;
-
-        const filteredProjects = filterProjectsByMinDuration(summary.projects, 60);
-        const mostActive = getMostActiveProject(filteredProjects);
 
         const unrecorded = getUnrecordedProjects(summary, currentLastRecordedDate);
         if (unrecorded) {
