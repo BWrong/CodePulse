@@ -1,5 +1,9 @@
  import * as https from 'https';
- import { WakaTimeSummariesResponse } from './wakatimeTypes';
+ import {
+  WakaTimeAllTimeResponse,
+  WakaTimeDurationsResponse,
+  WakaTimeSummariesResponse,
+} from './wakatimeTypes';
  import { formatDate } from '../utils/date';
 
  function friendlyErrorMessage(statusCode: number | undefined): string {
@@ -71,3 +75,97 @@
      });
    });
  }
+
+
+export function fetchWakaTimeDurations(
+  apiKey: string,
+  date: Date
+): Promise<WakaTimeDurationsResponse> {
+  const dateStr = formatDate(date);
+  const url = `https://wakatime.com/api/v1/users/current/durations?date=${dateStr}`;
+  const auth = Buffer.from(`${apiKey}:`).toString('base64');
+
+  return new Promise((resolve, reject) => {
+    const req = https
+      .get(
+        url,
+        {
+          headers: {
+            Authorization: `Basic ${auth}`,
+            Accept: 'application/json',
+          },
+        },
+        res => {
+          let data = '';
+          res.on('data', chunk => {
+            data += chunk;
+          });
+          res.on('end', () => {
+            if (res.statusCode === 200) {
+              try {
+                resolve(JSON.parse(data));
+              } catch (error) {
+                reject(new Error(`解析 WakaTime 响应失败：${error}`));
+              }
+            } else {
+              reject(new Error(friendlyErrorMessage(res.statusCode)));
+            }
+          });
+        }
+      )
+      .on('error', error => {
+        reject(new Error(`无法连接到 WakaTime，请检查网络或代理。(${error.message})`));
+      });
+
+    req.setTimeout(15000, () => {
+      req.destroy(new Error('请求 WakaTime 超时，请检查网络或代理。'));
+    });
+  });
+}
+
+
+export function fetchWakaTimeAllTime(
+  apiKey: string,
+  project?: string
+): Promise<WakaTimeAllTimeResponse> {
+  const base = 'https://wakatime.com/api/v1/users/current/all_time_since_today';
+  const url = project ? `${base}?project=${encodeURIComponent(project)}` : base;
+  const auth = Buffer.from(`${apiKey}:`).toString('base64');
+
+  return new Promise((resolve, reject) => {
+    const req = https
+      .get(
+        url,
+        {
+          headers: {
+            Authorization: `Basic ${auth}`,
+            Accept: 'application/json',
+          },
+        },
+        res => {
+          let data = '';
+          res.on('data', chunk => {
+            data += chunk;
+          });
+          res.on('end', () => {
+            if (res.statusCode === 200) {
+              try {
+                resolve(JSON.parse(data));
+              } catch (error) {
+                reject(new Error(`解析 WakaTime 响应失败：${error}`));
+              }
+            } else {
+              reject(new Error(friendlyErrorMessage(res.statusCode)));
+            }
+          });
+        }
+      )
+      .on('error', error => {
+        reject(new Error(`无法连接到 WakaTime，请检查网络或代理。(${error.message})`));
+      });
+
+    req.setTimeout(15000, () => {
+      req.destroy(new Error('请求 WakaTime 超时，请检查网络或代理。'));
+    });
+  });
+}
