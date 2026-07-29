@@ -22,7 +22,18 @@
         "title": "Open Dashboard",
         "category": "CodePulse"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "CodePulse",
+      "properties": {
+        "codepulse.minProjectDurationMinutes": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "description": "忽略编码时长低于该值（分钟）的项目统计，默认 5 分钟。设为 0 表示不过滤。"
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",

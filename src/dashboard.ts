@@ -239,6 +239,8 @@ private async sendInitialState(): Promise<void> {
    }
 
    private getHtmlForWebview(extensionUri: vscode.Uri): string {
+    const minProjectMinutes = vscode.workspace.getConfiguration('codepulse').get<number>('minProjectDurationMinutes', 5);
+    const minProjectSeconds = Math.max(0, Math.round(minProjectMinutes * 60));
     const uplotJsUri = this.panel.webview.asWebviewUri(
       vscode.Uri.joinPath(extensionUri, 'media', 'uPlot.iife.min.js')
     );
@@ -784,6 +786,7 @@ private async sendInitialState(): Promise<void> {
   <script>
     (function() {
       const vscode = acquireVsCodeApi();
+      const MIN_PROJECT_SECONDS = ${minProjectSeconds};
       let currentDays = 7;
       let chart = null;
       let chartResizeHandler = null;
@@ -875,7 +878,7 @@ private async sendInitialState(): Promise<void> {
         if (!unrecorded) {
           return null;
         }
-        unrecorded.projects = filterProjectsByMinDuration(unrecorded.projects, 60);
+        unrecorded.projects = filterProjectsByMinDuration(unrecorded.projects, MIN_PROJECT_SECONDS);
         unrecorded.totalSeconds = unrecorded.projects.reduce((sum, p) => sum + p.totalSeconds, 0);
         return unrecorded;
       }
@@ -904,7 +907,7 @@ private async sendInitialState(): Promise<void> {
       }
 
       function dayFilteredSeconds(day) {
-        return (day.projects || []).filter(p => p.totalSeconds >= 60).reduce((sum, p) => sum + p.totalSeconds, 0);
+        return (day.projects || []).filter(p => p.totalSeconds >= MIN_PROJECT_SECONDS).reduce((sum, p) => sum + p.totalSeconds, 0);
       }
 
       function renderLoading() {
@@ -956,7 +959,7 @@ private async sendInitialState(): Promise<void> {
         }
 
         const todaySeconds = getTodaySeconds(summary.days);
-        const filteredProjects = filterProjectsByMinDuration(summary.projects, 60);
+        const filteredProjects = filterProjectsByMinDuration(summary.projects, MIN_PROJECT_SECONDS);
         lastSummary = summary;
         const mostActive = getMostActiveDay(summary.days);
 

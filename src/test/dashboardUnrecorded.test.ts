@@ -78,8 +78,9 @@ suite('dashboard getUnrecordedProjects', () => {
 
 suite('dashboard computeUnrecorded', () => {
   const computeUnrecorded = new Function(
+    'MIN_PROJECT_SECONDS',
     `${extractFunctions(source, ['getUnrecordedProjects', 'filterProjectsByMinDuration', 'computeUnrecorded'])}; return computeUnrecorded;`
-  )() as (
+  )(60) as (
     summary: { days: { date: string; totalSeconds: number; projects: { name: string; totalSeconds: number }[] }[] } | null,
     lastRecordedDate: string | null | undefined
   ) => { totalSeconds: number; projects: { name: string; totalSeconds: number; percent: number }[] } | null;
@@ -117,6 +118,25 @@ suite('dashboard computeUnrecorded', () => {
   test('null summary returns null', () => {
     assert.strictEqual(computeUnrecorded(null, null), null);
   });
+
+  test('default 5 minute (300s) threshold filters projects under 300s', () => {
+    const computeUnrecordedDefault = new Function(
+      'MIN_PROJECT_SECONDS',
+      `${extractFunctions(source, ['getUnrecordedProjects', 'filterProjectsByMinDuration', 'computeUnrecorded'])}; return computeUnrecorded;`
+    )(300) as (
+      summary: { days: { date: string; totalSeconds: number; projects: { name: string; totalSeconds: number }[] }[] } | null,
+      lastRecordedDate: string | null | undefined
+    ) => { totalSeconds: number; projects: { name: string; totalSeconds: number; percent: number }[] } | null;
+    const days = [
+      { date: '2026-07-22', totalSeconds: 400, projects: [{ name: 'a', totalSeconds: 400 }] },
+      { date: '2026-07-23', totalSeconds: 200, projects: [{ name: 'b', totalSeconds: 200 }] },
+    ];
+    const r = computeUnrecordedDefault({ days }, '2026-07-21 10:00:00');
+    assert.ok(r);
+    assert.strictEqual(r!.projects.length, 1);
+    assert.strictEqual(r!.projects[0].name, 'a');
+    assert.strictEqual(r!.totalSeconds, 400);
+  });
 });
 
 suite('dashboard getDataEndDate', () => {
@@ -140,8 +160,9 @@ suite('dashboard getDataEndDate', () => {
 
 suite('dashboard dayFilteredSeconds', () => {
   const dayFilteredSeconds = new Function(
+    'MIN_PROJECT_SECONDS',
     `${extractFunctions(source, ['dayFilteredSeconds'])}; return dayFilteredSeconds;`
-  )() as (day: { date?: string; totalSeconds?: number; projects?: { totalSeconds: number }[] }) => number;
+  )(60) as (day: { date?: string; totalSeconds?: number; projects?: { totalSeconds: number }[] }) => number;
 
   test('sums only projects at or above 1 minute', () => {
     const day = { date: '2026-07-28', totalSeconds: 230, projects: [
@@ -166,5 +187,18 @@ suite('dashboard dayFilteredSeconds', () => {
 
   test('missing projects yields 0', () => {
     assert.strictEqual(dayFilteredSeconds({ date: '2026-07-28', totalSeconds: 0 }), 0);
+  });
+
+  test('5 minute (300s) threshold sums only projects at or above 300s', () => {
+    const dayFilteredSecondsDefault = new Function(
+      'MIN_PROJECT_SECONDS',
+      `${extractFunctions(source, ['dayFilteredSeconds'])}; return dayFilteredSeconds;`
+    )(300) as (day: { date?: string; totalSeconds?: number; projects?: { totalSeconds: number }[] }) => number;
+    const day = { date: '2026-07-28', totalSeconds: 650, projects: [
+      { name: 'a', totalSeconds: 400 },
+      { name: 'b', totalSeconds: 250 },
+      { name: 'c', totalSeconds: 50 },
+    ]};
+    assert.strictEqual(dayFilteredSecondsDefault(day), 400);
   });
 });
