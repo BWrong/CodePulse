@@ -57,7 +57,8 @@
  - **采集器抽象**：定义 `TimeCollector` 接口，例如 `getSummaries(start: Date, end: Date)`，返回规范化的汇总数据结构。首个实现为 `WakaTimeCollector`。
  - **WakaTime 采集器**：从 `~/.wakatime.cfg` 的 `[settings]` 段读取 `api_key`，使用 HTTP Basic Auth 请求 `https://wakatime.com/api/v1/users/current/summaries`。
  - **Dashboard Webview**：单个 Webview 面板，顶部有全局 7/30/90 tab 切换。使用原生 HTML/CSS/TypeScript 和 uPlot 绘制柱状图。数据通过 `postMessage` 传递。
- - **趋势图过滤**：每日时长按「当天 ≥1 分钟项目之和」计算，<1 分钟的项目不纳入趋势线与 tooltip，与项目视图、未记录模块口径一致。
+ - **项目最小时长过滤**：为减少噪声，编码时长低于阈值的项目不纳入项目视图、趋势图、未记录模块、时段分布（口径一致）。阈值通过配置项 `codepulse.minProjectDurationMinutes` 设置，单位为分钟，默认 `5`，设为 `0` 表示不过滤。配置在打开面板时注入 Webview。
+ - **趋势图过滤**：每日时长按「当天 ≥ 项目最小时长阈值的项目之和」计算，低于阈值的项目不纳入趋势线与 tooltip，与项目视图、未记录模块口径一致。
  - **数据聚合**：扩展宿主在把数据发给 Webview 前，先对 WakaTime 返回的每日数据按天和按项目做聚合。
  - **状态栏**：状态栏项显示今日编码时长，格式为 `Xh Ym`，点击打开面板。
  - **抄表标记**：`lastRecordedDate` 以 ISO 日期字符串形式存储在 `ExtensionContext.globalState` 中。激活时调用 `globalState.setKeysForSync(['lastRecordedDate'])`，使其参与 VS Code 设置同步。
@@ -66,7 +67,7 @@
  - **暂不同步腾讯文档**：MVP 明确不包含向腾讯文档推送数据，用户继续从项目列表手动复制数值。
  - **不做项目映射**：由于用户是一仓库一项目，直接使用 WakaTime 项目名。
  - **错误处理**：缺少配置或 API 失败时，在面板内以文字提示形式展示，并提供重试按钮。
-- **时段分布模块**：调用 WakaTime `/api/v1/users/current/durations` 接口获取某日的编码时长数据，通过 `durationsAggregator.ts` 纯函数聚合为 24 小时分桶的项目时段分布。session 按 1 小时分桶，跨小时 session 精确切分到对应桶。同一项目的重叠 session 会被合并。<1 分钟的项目不纳入（与项目视图、趋势图、未记录模块口径一致）。模块位于趋势图之后、项目视图之前。单日视图，左右箭头切换日期，默认今天。按日期做内存缓存避免重复请求。不设日期范围限制，API 出错显示错误提示。空状态只显示提示文案。hover bar 显示该时段的起止时间和时长。布局：标题"时段分布"在左，总时长+日期切换在右上角。bar 用蓝色渐变 `#3794ff -> #2196f3`，无圆角。
+- **时段分布模块**：调用 WakaTime `/api/v1/users/current/durations` 接口获取某日的编码时长数据，通过 `durationsAggregator.ts` 纯函数聚合为 24 小时分桶的项目时段分布。session 按 1 小时分桶，跨小时 session 精确切分到对应桶。同一项目的重叠 session 会被合并。低于项目最小时长阈值的项目不纳入（与项目视图、趋势图、未记录模块口径一致，阈值由 `codepulse.minProjectDurationMinutes` 控制，默认 5 分钟）。模块位于趋势图之后、项目视图之前。单日视图，左右箭头切换日期，默认今天。按日期做内存缓存避免重复请求。不设日期范围限制，API 出错显示错误提示。空状态只显示提示文案。hover bar 显示该时段的起止时间和时长。布局：标题"时段分布"在左，总时长+日期切换在右上角。bar 用蓝色渐变 `#3794ff -> #2196f3`，无圆角。
 - **项目总时长**：点击项目视图中的项目名弹出气泡 popover，通过 WakaTime `/api/v1/users/current/all_time_since_today?project=xxx` 接口获取该项目不限时间的总时长。已查询的项目做内存缓存。气泡显示"总计 Xh Ym"，点击页面其他地方关闭。
 - **局部更新**：Dashboard 首次渲染创建固定容器结构（`#stats-section` / `#unrecorded-wrapper` / `#chart` / `#distributionSection` / `#projects-section`），后续切换 7/30/90 或刷新时只更新对应模块的 innerHTML，不整体替换。loading 时只更新统计卡片区域显示"加载中…"，不替换整个页面。时段分布模块不受 7/30/90 切换影响。
 - **趋势图改进**：坐标轴文字颜色通过 uPlot 配置 `stroke` 设置（CSS 无法覆盖 SVG 内联 fill）。X 轴 `space` 函数动态计算刻度间距，确保每天最多一个刻度。趋势图选中区域可通过标题行右侧"重置"按钮恢复完整数据范围。趋势图线条用蓝色 `#3794ff` + `rgba(55, 148, 255, 0.2)` 填充。`chart.setSize` 参数为 `{ width, height }` 对象格式。
