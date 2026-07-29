@@ -2,7 +2,7 @@
   "name": "codepulse-statistics",
   "displayName": "CodePulse|Code Statistics",
   "description": "在 VS Code 内查看按项目汇总的编码时间",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "BWrong",
   "engines": {
     "vscode": "^1.74.0"
