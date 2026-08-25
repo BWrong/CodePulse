@@ -34,6 +34,11 @@ _codepulse_agent_of() {
     claude)     print -r -- "claude-code" ;;
     pi)         print -r -- "pi" ;;
     cursor)     print -r -- "cursor-agent" ;;
+    opencode)   print -r -- "opencode" ;;
+    omp)        print -r -- "omp" ;;
+    aider)      print -r -- "aider" ;;
+    gemini)     print -r -- "gemini" ;;
+    copilot)    print -r -- "copilot" ;;
     *)          print -r -- "cli" ;;
   esac
 }

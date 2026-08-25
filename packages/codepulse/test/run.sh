@@ -117,6 +117,23 @@ log="$(cat "$TMP2/mock-agent.log" 2>/dev/null)"
 echo "$log" | grep -q -- "--agent codex" && echo "$log" | grep -q -- "--agent cli" \
   && ok "插件识别 codex→codex、普通命令→cli" || bad "agent 识别不符: $log"
 
+echo "== 12. 扩展 agent 识别（opencode/omp 等主流） =="
+MOCK4="$TMP2/mock-agent2"
+printf '#!/usr/bin/env bash\necho "$*" >> "%s/mock-agent2.log"\n' "$TMP2" > "$MOCK4"; chmod +x "$MOCK4"
+CODEPULSE_CLI="$MOCK4" CODEPULSE_INTERVAL=5 zsh -f -c '
+  source "$1"
+  _codepulse_preexec "opencode"
+  _codepulse_precmd
+  _codepulse_preexec "omp"
+  _codepulse_precmd
+  _codepulse_preexec "aider --model o3"
+  _codepulse_precmd
+  sleep 0.6
+' _ "$ROOT/shell/codepulse.zsh" 2>/dev/null
+log="$(cat "$TMP2/mock-agent2.log" 2>/dev/null)"
+echo "$log" | grep -q -- "--agent opencode" && echo "$log" | grep -q -- "--agent omp" && echo "$log" | grep -q -- "--agent aider" \
+  && ok "识别 opencode/omp/aider" || bad "扩展识别不符: $log"
+
 rm -rf "$TMP" "$TMP2"
 echo
 echo "结果: $PASS 通过, $FAIL 失败"
