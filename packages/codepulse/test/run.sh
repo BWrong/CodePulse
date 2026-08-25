@@ -94,6 +94,29 @@ out="$(WAKATIME_API_KEY=fake "$CLI" heartbeat --project P --entity test --dry-ru
 echo "$out" | grep -q '"user_agent":"codepulse-cli/' \
   && ok "心跳携带 user_agent 工具标识" || bad "缺少 user_agent: $out"
 
+echo "== 10. --agent 工具标识 =="
+out="$(WAKATIME_API_KEY=fake "$CLI" heartbeat --project P --entity codex --agent codex --dry-run 2>&1)"
+echo "$out" | grep -q '"user_agent":"codepulse-cli/codex"' \
+  && ok "--agent codex 拼入 user_agent" || bad "应 codepulse-cli/codex: $out"
+out="$(WAKATIME_API_KEY=fake "$CLI" heartbeat --project P --entity npm --dry-run 2>&1)"
+echo "$out" | grep -q '"user_agent":"codepulse-cli/cli"' \
+  && ok "默认 agent 为 cli" || bad "应 codepulse-cli/cli: $out"
+
+echo "== 11. zsh 插件识别 agent =="
+MOCK3="$TMP2/mock-agent"
+printf '#!/usr/bin/env bash\necho "$*" >> "%s/mock-agent.log"\n' "$TMP2" > "$MOCK3"; chmod +x "$MOCK3"
+CODEPULSE_CLI="$MOCK3" CODEPULSE_INTERVAL=5 zsh -f -c '
+  source "$1"
+  _codepulse_preexec "codex"
+  _codepulse_precmd
+  _codepulse_preexec "npm run dev"
+  _codepulse_precmd
+  sleep 0.6
+' _ "$ROOT/shell/codepulse.zsh" 2>/dev/null
+log="$(cat "$TMP2/mock-agent.log" 2>/dev/null)"
+echo "$log" | grep -q -- "--agent codex" && echo "$log" | grep -q -- "--agent cli" \
+  && ok "插件识别 codex→codex、普通命令→cli" || bad "agent 识别不符: $log"
+
 rm -rf "$TMP" "$TMP2"
 echo
 echo "结果: $PASS 通过, $FAIL 失败"

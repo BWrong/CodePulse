@@ -24,10 +24,25 @@ _codepulse_project_of() {
   fi
 }
 
+# 从命令第一个词识别编码 agent（可扩展），未识别归为 cli
+_codepulse_agent_of() {
+  local cmd="$1" name
+  name="${cmd%% *}"      # 第一个 token
+  name="${name:t}"       # basename
+  case "$name" in
+    codex)      print -r -- "codex" ;;
+    claude)     print -r -- "claude-code" ;;
+    pi)         print -r -- "pi" ;;
+    cursor)     print -r -- "cursor-agent" ;;
+    *)          print -r -- "cli" ;;
+  esac
+}
+
 _codepulse_preexec() {
   _codepulse_entity="$1"
   [[ -n "$_codepulse_entity" ]] || return
   _codepulse_project="$(_codepulse_project_of "$PWD")"
+  _codepulse_agent="$(_codepulse_agent_of "$_codepulse_entity")"
   _codepulse_hb_pid=""
   # 命令运行期间的后台周期心跳循环；终端关闭（父 zsh 退出）时循环自行终止
   (
@@ -37,6 +52,7 @@ _codepulse_preexec() {
         --project "$_codepulse_project" \
         --entity "$_codepulse_entity" \
         --type app --category coding --write \
+        --agent "$_codepulse_agent" \
         --time "$(date +%s)" >/dev/null 2>&1 || true
       sleep "$interval"
     done
@@ -54,6 +70,7 @@ _codepulse_precmd() {
     --project "$_codepulse_project" \
     --entity "$_codepulse_entity" \
     --type app --category coding --write \
+    --agent "$_codepulse_agent" \
     --time "$(date +%s)" >/dev/null 2>&1 &!
   _codepulse_entity=""
 }
