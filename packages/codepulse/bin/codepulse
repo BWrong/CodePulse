@@ -7,7 +7,7 @@ set -euo pipefail
 
 API_URL="${WAKATIME_API_URL:-https://api.wakatime.com/api/v1}"
 CONFIG="${WAKATIME_CONFIG:-$HOME/.wakatime.cfg}"
-PLUGIN="${CODEPULSE_PLUGIN:-codepulse-cli/0.1.0}"
+PLUGIN="${CODEPULSE_PLUGIN:-codepulse-cli/0.1.1}"
 TIMEOUT="${CODEPULSE_TIMEOUT:-5}"
 MODE="heartbeat"
 YES=0
@@ -98,15 +98,8 @@ read_api_key() {
   [[ -n "$key" ]] && printf '%s\n' "$key"
 }
 
+# 从脚本真实路径推断包根（npm 全局 / 开发环境兜底）
 detect_pkg_root() {
-  # 按优先级：CODEPULSE_ROOT > npm 全局包目录 > 脚本真实路径推断
-  [[ -n "${CODEPULSE_ROOT:-}" ]] && { printf '%s\n' "$CODEPULSE_ROOT"; return; }
-  local g
-  g="$(npm root -g 2>/dev/null || true)"
-  if [[ -n "$g" && -d "$g/@bwrong/codepulse" ]]; then
-    printf '%s\n' "$g/@bwrong/codepulse"
-    return
-  fi
   local self real
   self="$(command -v codepulse 2>/dev/null || printf '%s' "$0")"
   real="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$self" 2>/dev/null || printf '%s' "$self")"
@@ -115,25 +108,39 @@ detect_pkg_root() {
 
 init_zsh() {
   local zshrc="${ZDOTDIR:-$HOME}/.zshrc"
-  local pkg_root plugin line
-  pkg_root="$(detect_pkg_root)"
-  plugin="$pkg_root/shell/codepulse.zsh"
+  local plugin line
+  if [[ -n "${CODEPULSE_ROOT:-}" ]]; then
+    # 自定义包根：写入 CODEPULSE_ROOT 变量形式，可移植
+    plugin="${CODEPULSE_ROOT}/shell/codepulse.zsh"
+    line='source "$CODEPULSE_ROOT/shell/codepulse.zsh"'
+  else
+    # npm 全局安装：写入命令替换形式，动态取路径
+    plugin="$(npm root -g 2>/dev/null || true)/@bwrong/codepulse/shell/codepulse.zsh"
+    if [[ ! -f "$plugin" ]]; then
+      # 非 npm 全局（开发环境）：退化为绝对路径
+      local pkg_root
+      pkg_root="$(detect_pkg_root)"
+      plugin="$pkg_root/shell/codepulse.zsh"
+      line="source \"$plugin\""
+    else
+      line='source "$(npm root -g)/@bwrong/codepulse/shell/codepulse.zsh"'
+    fi
+  fi
   if [[ ! -f "$plugin" ]]; then
     echo "codepulse: 未找到 zsh 插件 ${plugin}（可设置 CODEPULSE_ROOT 指定包根）" >&2
     exit 1
   fi
-  line="source \"$plugin\""
   if [[ -f "$zshrc" ]] && grep -qF "codepulse.zsh" "$zshrc"; then
-    echo "codepulse: $zshrc 已包含 codepulse 配置，跳过"
+    echo "codepulse: ${zshrc} 已包含 codepulse 配置，跳过"
     return 0
   fi
   if [[ $DRY -eq 1 ]]; then
-    echo "将向 $zshrc 追加以下内容："
+    echo "将向 ${zshrc} 追加以下内容："
     echo "  $line"
     return 0
   fi
   if [[ $YES -ne 1 ]]; then
-    echo "将向 $zshrc 追加以下内容："
+    echo "将向 ${zshrc} 追加以下内容："
     echo "  $line"
     printf '确认添加？[y/N] '
     read -r ans || true
@@ -198,10 +205,10 @@ http_code="$(curl -sS --max-time "$TIMEOUT" -o "$resp_file" -w '%{http_code}' \
 
 case "$http_code" in
   201|202) exit 0 ;;
-  401) echo "codepulse: 401 鉴权失败，请检查 $CONFIG 中的 api_key" >&2 ;;
+  401) echo "codepulse: 401 鉴权失败，请检查 ${CONFIG} 中的 api_key" >&2 ;;
   429) echo "codepulse: 429 请求过于频繁，稍后自动重试" >&2 ;;
   "")  echo "codepulse: 网络请求失败" >&2 ;;
-  *)   echo "codepulse: WakaTime 返回 $http_code" >&2
+  *)   echo "codepulse: WakaTime 返回 ${http_code}" >&2
        sed 's/^/  /' "$resp_file" >&2 || true ;;
 esac
 exit 1

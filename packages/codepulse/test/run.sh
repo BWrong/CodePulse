@@ -70,6 +70,25 @@ else
   bad "长驻命令应 ≥3 条心跳且含 codex，实得 ${n:-0}"
 fi
 
+echo "== 8. init-zsh 生成可移植变量形式 =="
+# A. CODEPULSE_ROOT 自定义 → CODEPULSE_ROOT 变量形式
+T3="$(mktemp -d)"
+CODEPULSE_ROOT="$ROOT" ZDOTDIR="$T3" "$CLI" init-zsh --yes >/dev/null 2>&1
+grep -qF 'source "$CODEPULSE_ROOT/shell/codepulse.zsh"' "$T3/.zshrc" \
+  && ok "CODEPULSE_ROOT 生成变量形式" || bad "应为 CODEPULSE_ROOT 变量形式: $(cat "$T3/.zshrc")"
+# B. npm 全局安装 → 命令替换形式（mock npm root -g）
+T5="$(mktemp -d)"
+mkdir -p "$T5/bin" "$T5/zd" "$T5/lib/node_modules/@bwrong/codepulse/shell"
+cp "$ROOT/shell/codepulse.zsh" "$T5/lib/node_modules/@bwrong/codepulse/shell/"
+printf '#!/usr/bin/env bash\necho "%s/lib/node_modules"\n' "$T5" > "$T5/bin/npm"; chmod +x "$T5/bin/npm"
+PATH="$T5/bin:$PATH" CODEPULSE_ROOT= ZDOTDIR="$T5/zd" "$CLI" init-zsh --yes >/dev/null 2>&1
+grep -qF 'source "$(npm root -g)/@bwrong/codepulse/shell/codepulse.zsh"' "$T5/zd/.zshrc" \
+  && ok "npm 全局生成命令替换形式" || bad "应为 npm root -g 形式: $(cat "$T5/zd/.zshrc")"
+# C. 重复运行跳过
+CODEPULSE_ROOT="$ROOT" ZDOTDIR="$T3" "$CLI" init-zsh --yes 2>&1 | grep -q "已包含" \
+  && ok "重复运行跳过" || bad "重复运行应跳过"
+rm -rf "$T3" "$T5"
+
 rm -rf "$TMP" "$TMP2"
 echo
 echo "结果: $PASS 通过, $FAIL 失败"
