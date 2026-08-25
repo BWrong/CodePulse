@@ -12,6 +12,7 @@
 
 _codepulse_cli="${CODEPULSE_CLI:-codepulse}"
 _codepulse_interval="${CODEPULSE_INTERVAL:-60}"
+_codepulse_screen_check="${CODEPULSE_SCREEN_CHECK:-1}"
 _codepulse_hb_pid=""
 
 _codepulse_project_of() {
@@ -43,6 +44,20 @@ _codepulse_agent_of() {
   esac
 }
 
+# 检测屏幕是否锁定或睡眠（返回 0=离开应暂停心跳，1=正常）。
+# 方案 B：仅以"锁屏/显示器睡眠"作为离开信号，长任务无输入照常计入。
+_codepulse_screen_away() {
+  # 1) 锁屏：前台应用为 loginwindow
+  if lsappinfo front 2>/dev/null | grep -qi 'loginwindow'; then
+    return 0
+  fi
+  # 2) 显示器睡眠：IODisplayWrangler 的 DevicePowerState=0
+  if ioreg -n IODisplayWrangler -r -d 1 2>/dev/null | grep -q '"DevicePowerState"=0'; then
+    return 0
+  fi
+  return 1
+}
+
 _codepulse_preexec() {
   _codepulse_entity="$1"
   [[ -n "$_codepulse_entity" ]] || return
@@ -53,6 +68,11 @@ _codepulse_preexec() {
   (
     local interval="$_codepulse_interval"
     while kill -0 "$PPID" 2>/dev/null; do
+      # 锁屏/显示器睡眠时暂停心跳（wakatime 自动断开），解锁/唤醒后恢复
+      if [[ "$_codepulse_screen_check" == "1" ]] && _codepulse_screen_away; then
+        sleep "$interval"
+        continue
+      fi
       command "$_codepulse_cli" heartbeat \
         --project "$_codepulse_project" \
         --entity "$_codepulse_entity" \

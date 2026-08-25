@@ -1,6 +1,6 @@
 {
   "name": "@bwrong/codepulse",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "CodePulse 编码时间采集 CLI：向 WakaTime 上报终端/CLI 心跳，附 zsh 插件",
   "keywords": [
     "wakatime",

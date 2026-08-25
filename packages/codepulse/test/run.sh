@@ -134,6 +134,22 @@ log="$(cat "$TMP2/mock-agent2.log" 2>/dev/null)"
 echo "$log" | grep -q -- "--agent opencode" && echo "$log" | grep -q -- "--agent omp" && echo "$log" | grep -q -- "--agent aider" \
   && ok "识别 opencode/omp/aider" || bad "扩展识别不符: $log"
 
+echo "== 13. 锁屏/睡眠判定（方案 B） =="
+T6="$(mktemp -d)"; mkdir -p "$T6/bin"
+printf '#!/usr/bin/env bash\necho "${MOCK_LSAPPINFO:-label:com.apple.Terminal}"\n' > "$T6/bin/lsappinfo"
+printf '#!/usr/bin/env bash\necho "${MOCK_IOREG:-}"\n' > "$T6/bin/ioreg"
+chmod +x "$T6/bin/"*
+# A. 锁屏（前台 loginwindow）→ 判定离开
+PATH="$T6/bin:$PATH" MOCK_LSAPPINFO='label:com.apple.loginwindow' zsh -f -c 'source "$1"; _codepulse_screen_away' _ "$ROOT/shell/codepulse.zsh" 2>/dev/null
+[[ $? -eq 0 ]] && ok "锁屏(loginwindow)判定为离开" || bad "锁屏应判定离开"
+# B. 正常前台（Terminal）→ 判定活跃
+PATH="$T6/bin:$PATH" MOCK_LSAPPINFO='label:com.apple.Terminal' zsh -f -c 'source "$1"; _codepulse_screen_away' _ "$ROOT/shell/codepulse.zsh" 2>/dev/null
+[[ $? -eq 1 ]] && ok "正常前台判定为活跃" || bad "正常前台应判定活跃"
+# C. 显示器睡眠（DevicePowerState=0）→ 判定离开
+PATH="$T6/bin:$PATH" MOCK_LSAPPINFO='label:com.apple.Terminal' MOCK_IOREG='"DevicePowerState"=0' zsh -f -c 'source "$1"; _codepulse_screen_away' _ "$ROOT/shell/codepulse.zsh" 2>/dev/null
+[[ $? -eq 0 ]] && ok "显示器睡眠判定为离开" || bad "显示器睡眠应判定离开"
+rm -rf "$T6"
+
 rm -rf "$TMP" "$TMP2"
 echo
 echo "结果: $PASS 通过, $FAIL 失败"
