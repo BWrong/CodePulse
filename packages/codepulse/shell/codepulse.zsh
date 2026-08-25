@@ -40,9 +40,8 @@ _codepulse_preexec() {
         --time "$(date +%s)" >/dev/null 2>&1 || true
       sleep "$interval"
     done
-  ) &
+  ) &!
   _codepulse_hb_pid=$!
-  disown "$_codepulse_hb_pid" 2>/dev/null || true
 }
 
 _codepulse_precmd() {
@@ -55,8 +54,7 @@ _codepulse_precmd() {
     --project "$_codepulse_project" \
     --entity "$_codepulse_entity" \
     --type app --category coding --write \
-    --time "$(date +%s)" >/dev/null 2>&1 &
-  disown 2>/dev/null || true
+    --time "$(date +%s)" >/dev/null 2>&1 &!
   _codepulse_entity=""
 }
 
