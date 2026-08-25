@@ -32,11 +32,11 @@ shell/codepulse.zsh  ──►  bin/codepulse（统一上报 CLI）
 
 1. 将 `bin/codepulse` 加入 PATH（推荐软链到 `~/.local/bin`）：
    ```sh
-   ln -s /Users/bwrong/0WorkSpace/00.Misthin/codePulse/bin/codepulse ~/.local/bin/codepulse
+   ln -s /Users/bwrong/0WorkSpace/00.Misthin/codePulse/packages/codepulse/bin/codepulse ~/.local/bin/codepulse
    ```
 2. 在 `~/.zshrc` 末尾加一行：
    ```sh
-   source /Users/bwrong/0WorkSpace/00.Misthin/codePulse/shell/codepulse.zsh
+   source /Users/bwrong/0WorkSpace/00.Misthin/codePulse/packages/codepulse/shell/codepulse.zsh
    ```
 3. 重开终端（或 `source ~/.zshrc`）生效。cli 不可用时不挂钩子，无副作用。
 
@@ -50,7 +50,7 @@ codepulse heartbeat --project test --dry-run
 # wakatime / CodePulse 面板应能看到该项目的连续时长
 
 # 冒烟测试（7 项：项目探测 / JSON 转义 / 鉴权 / 插件触发）
-bash /Users/bwrong/0WorkSpace/00.Misthin/codePulse/test/run.sh
+bash /Users/bwrong/0WorkSpace/00.Misthin/codePulse/packages/codepulse/test/run.sh
 ```
 
 ## CLI 用法
