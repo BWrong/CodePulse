@@ -89,6 +89,11 @@ CODEPULSE_ROOT="$ROOT" ZDOTDIR="$T3" "$CLI" init-zsh --yes 2>&1 | grep -q "已�
   && ok "重复运行跳过" || bad "重复运行应跳过"
 rm -rf "$T3" "$T5"
 
+echo "== 9. 心跳携带工具来源标识 user_agent =="
+out="$(WAKATIME_API_KEY=fake "$CLI" heartbeat --project P --entity test --dry-run 2>&1)"
+echo "$out" | grep -q '"user_agent":"codepulse-cli/' \
+  && ok "心跳携带 user_agent 工具标识" || bad "缺少 user_agent: $out"
+
 rm -rf "$TMP" "$TMP2"
 echo
 echo "结果: $PASS 通过, $FAIL 失败"
