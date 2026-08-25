@@ -31,4 +31,4 @@
  
  ## 需求文档
  
- 详见 [docs/spec.md](./docs/spec.md)。
+ 详见 [docs/spec.md](https://github.com/BWrong/CodePulse/blob/main/docs/spec.md)。

@@ -23,4 +23,4 @@ zsh 插件安装后：每次敲命令即发心跳，codex / claude code 等长�
 
 ## 文档
 
-详见 [docs/shell-tracking.md](docs/shell-tracking.md)。
+详见 [docs/shell-tracking.md](https://github.com/BWrong/CodePulse/blob/main/packages/codepulse/docs/shell-tracking.md)。
