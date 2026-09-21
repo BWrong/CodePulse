@@ -1,0 +1,40 @@
+{
+  "name": "@bwrong/pi-wakatime",
+  "version": "0.1.0",
+  "description": "WakaTime AI activity tracking extension for Pi",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "wakatime",
+    "time-tracking",
+    "ai"
+  ],
+  "license": "MIT",
+  "files": [
+    "extensions/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "test": "node --test --experimental-strip-types test/*.test.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/wakatime.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BWrong/CodePulse.git",
+    "directory": "packages/pi-wakatime"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
