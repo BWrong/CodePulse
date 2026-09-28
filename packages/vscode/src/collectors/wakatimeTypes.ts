@@ -55,3 +55,29 @@ export interface WakaTimeDurationsResponse {
   end: string;
   timezone: string;
 }
+
+/** status_bar/today 的 data 与 Summaries 单日同形，只读服务端缓存。 */
+export interface WakaTimeStatusBarResponse {
+  cached_at: string;
+  data: WakaTimeDaySummary;
+  has_team_features: boolean;
+}
+
+export type WakaTimeDataDumpType = 'daily' | 'heartbeats';
+
+export interface WakaTimeDataDump {
+  id: string;
+  status: string;
+  percent_complete: number;
+  download_url: string | null;
+  type: WakaTimeDataDumpType;
+  is_processing: boolean;
+  is_stuck: boolean;
+  has_failed: boolean;
+  expires: string;
+  created_at: string;
+}
+
+export interface WakaTimeDataDumpsResponse {
+  data: WakaTimeDataDump[];
+}
