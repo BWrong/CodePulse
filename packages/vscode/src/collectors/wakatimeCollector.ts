@@ -1,15 +1,14 @@
 import {
   CodingSummary,
-  ProjectAllTime,
   ProjectDayDistribution,
+  ProjectDetails,
   TimeCollector,
 } from '../models';
 import {
-  fetchWakaTimeAllTime,
   fetchWakaTimeDurations,
   fetchWakaTimeSummaries,
 } from './wakatimeApiClient';
- import { aggregateSummaries } from './wakatimeAggregator';
+ import { aggregateSummaries, aggregateProjectDetails } from './wakatimeAggregator';
 import { aggregateDurations } from './durationsAggregator';
  import { readWakaTimeApiKey } from './wakatimeConfigReader';
 
@@ -26,13 +25,13 @@ import { aggregateDurations } from './durationsAggregator';
     return aggregateDurations(response, date);
   }
 
-  async getProjectAllTime(project: string): Promise<ProjectAllTime> {
-    const response = await fetchWakaTimeAllTime(this.apiKey, project);
-    return {
-      project,
-      totalSeconds: response.data.total_seconds,
-      dailyAverage: response.data.daily_average,
-    };
+  async getProjectDetails(
+    project: string,
+    start: Date,
+    end: Date
+  ): Promise<ProjectDetails> {
+    const response = await fetchWakaTimeSummaries(this.apiKey, start, end, project);
+    return aggregateProjectDetails(response, project);
   }
  }
 

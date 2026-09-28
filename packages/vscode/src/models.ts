@@ -41,16 +41,34 @@ export interface ProjectDayDistribution {
    dailyAverageSeconds: number;
    days: DailySummary[];
    projects: ProjectSummary[];
- }
-
- export interface ProjectAllTime {
-  project: string;
-  totalSeconds: number;
-  dailyAverage: number;
 }
 
-export interface TimeCollector {
-   getSummaries(start: Date, end: Date): Promise<CodingSummary>;
-   getDistributionByDate(date: Date): Promise<ProjectDayDistribution>;
-   getProjectAllTime(project: string): Promise<ProjectAllTime>;
+export interface ProjectAiStats {
+   aiTotalTokens: number;
+   aiModelCost: number;
+   aiCacheHitRate: number;
+   aiLineRatio: number;
+   aiLines: number;
+   humanLines: number;
+   aiSessions: number;
  }
+
+ export interface ProjectDimensionItem {
+   name: string;
+   totalSeconds: number;
+   percent: number;
+ }
+
+ export interface ProjectDetails {
+   project: string;
+   totalSeconds: number;
+   ai: ProjectAiStats;
+   editors: ProjectDimensionItem[];
+   categories: ProjectDimensionItem[];
+ }
+
+ export interface TimeCollector {
+    getSummaries(start: Date, end: Date): Promise<CodingSummary>;
+    getDistributionByDate(date: Date): Promise<ProjectDayDistribution>;
+    getProjectDetails(project: string, start: Date, end: Date): Promise<ProjectDetails>;
+  }

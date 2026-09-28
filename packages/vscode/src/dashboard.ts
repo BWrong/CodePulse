@@ -1,5 +1,5 @@
  import * as vscode from 'vscode';
- import { CodingSummary, ProjectDayDistribution, TimeCollector } from './models';
+ import { CodingSummary, ProjectDayDistribution, ProjectDetails, TimeCollector } from './models';
  import { getLastRecordedDate, markTodayAsRecorded } from './recordedDate';
 
  export type RangeDays = 7 | 30 | 90;
@@ -32,7 +32,7 @@
   private currentProjectDate = new Date();
   private isLoadingProject = false;
   private distributionCache = new Map<string, ProjectDayDistribution>();
-  private allTimeCache = new Map<string, number>();
+  private projectDetailsCache = new Map<string, ProjectDetails>();
 
    private constructor(extensionUri: vscode.Uri, state: DashboardState) {
      this.collector = state.collector;
@@ -102,12 +102,12 @@
              this.currentProjectDate = new Date(message.projectDay);
              await this.loadAndSendProjectDistribution();
            }
-           break;
+break;
          case 'clickProject':
-          if (message.projectName) {
-            await this.loadProjectAllTime(message.projectName);
-          }
-          break;
+            if (message.projectName) {
+              await this.loadProjectDetails(message.projectName);
+            }
+            break;
         case 'openExternal':
            if (message.url) {
              await vscode.env.openExternal(vscode.Uri.parse(message.url));
@@ -117,32 +117,34 @@
      });
    }
 
-     private async loadProjectAllTime(projectName: string): Promise<void> {
-    const cached = this.allTimeCache.get(projectName);
-    if (cached !== undefined) {
+     private async loadProjectDetails(projectName: string): Promise<void> {
+    const cacheKey = `${projectName}:${this.currentDays}`;
+    const cached = this.projectDetailsCache.get(cacheKey);
+    if (cached) {
       this.panel.webview.postMessage({
-        command: 'projectAllTime',
+        command: 'projectDetails',
         projectName,
-        totalSeconds: cached,
+        details: cached,
       });
       return;
     }
     this.panel.webview.postMessage({
-      command: 'projectAllTimeLoading',
+      command: 'projectDetailsLoading',
       projectName,
     });
     try {
-      const result = await this.collector.getProjectAllTime(projectName);
-      this.allTimeCache.set(projectName, result.totalSeconds);
+      const { start, end } = this.getDateRange(this.currentDays);
+      const details = await this.collector.getProjectDetails(projectName, start, end);
+      this.projectDetailsCache.set(cacheKey, details);
       this.panel.webview.postMessage({
-        command: 'projectAllTime',
+        command: 'projectDetails',
         projectName,
-        totalSeconds: result.totalSeconds,
+        details,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.panel.webview.postMessage({
-        command: 'projectAllTimeError',
+        command: 'projectDetailsError',
         projectName,
         message,
       });
@@ -400,6 +402,16 @@ private async sendInitialState(): Promise<void> {
       grid-template-columns: 1fr auto;
       gap: 8px 12px;
       align-items: center;
+      cursor: pointer;
+      padding: 4px 6px;
+      margin: -4px -6px;
+      border-radius: 4px;
+    }
+    .project-item:hover {
+      background: rgba(173, 173, 173, 0.05);
+    }
+    .project-item.expanded {
+      background: rgba(55, 148, 255, 0.06);
     }
     .project-bar-bg {
       grid-column: 1 / -1;
@@ -420,29 +432,162 @@ private async sendInitialState(): Promise<void> {
     .project-name {
       font-size: 13px;
       font-weight: 500;
-      cursor: pointer;
-    }
-    .project-name:hover {
-      color: var(--link);
-    }
-    .project-popover {
-      position: fixed;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--fg);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-      z-index: 200;
-      pointer-events: none;
-      white-space: nowrap;
     }
     .project-time {
       font-size: 13px;
       color: var(--muted);
       text-align: right;
+    }
+    .project-detail {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      margin-top: 4px;
+    }
+    .project-detail-main {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .project-detail-row {
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+    }
+    .project-detail-card {
+      flex: 1 1 0;
+      min-width: 0;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .project-detail-card--stats {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+    }
+    .project-detail-card--donut {
+      display: flex;
+      flex-direction: column;
+    }
+    .project-detail-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      align-content: center;
+      align-items: center;
+      gap: 8px 16px;
+    }
+    .project-detail-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .project-detail-stat-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .project-detail-stat-value {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .project-detail-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin: 12px 0 8px;
+    }
+    .project-detail-chart {
+      height: 160px;
+      width: 100%;
+    }
+    .project-detail-ai {
+      display: flex;
+      align-items: center;
+      border-top: 1px solid var(--border);
+    }
+    .project-detail-ai-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px 16px;
+      width: 100%;
+    }
+    .project-detail-donut-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .project-detail-donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+    .project-detail-donut {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .project-detail-donut svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .project-detail-donut.donut-empty {
+      opacity: 0.4;
+    }
+    .project-detail-donut-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--muted);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .project-detail-donut-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .project-detail-donut-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      min-width: 0;
+    }
+    .project-detail-donut-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .project-detail-donut-name {
+      color: var(--fg);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .project-detail-donut-pct {
+      color: var(--muted);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .project-detail-loading, .project-detail-error {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px 0;
+    }
+    .project-detail-error {
+      color: var(--vscode-errorForeground, #f14c4c);
     }
     .empty, .error, .loading {
       padding: 40px 20px;
@@ -598,6 +743,43 @@ private async sendInitialState(): Promise<void> {
       color: var(--muted);
     }
     .uplot-tooltip-value {
+      color: var(--fg);
+      white-space: nowrap;
+    }
+    .project-detail-tooltip {
+      position: fixed;
+      z-index: 100;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--fg);
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 280px;
+    }
+    .project-detail-tooltip-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      color: var(--fg);
+    }
+    .project-detail-tooltip-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 3px 0;
+    }
+    .project-detail-tooltip-row.total {
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .project-detail-tooltip-label {
+      color: var(--muted);
+    }
+    .project-detail-tooltip-value {
       color: var(--fg);
       white-space: nowrap;
     }
@@ -994,8 +1176,8 @@ private async sendInitialState(): Promise<void> {
               <div class="section-title">项目视图</div>
               <div class="project-list">
                 \${filteredProjects.map(p => \`
-                  <div class="project-item">
-                    <span class="project-name" data-project="\${escapeHtml(p.name)}">\${escapeHtml(p.name)}</span>
+                  <div class="project-item" data-project="\${escapeHtml(p.name)}">
+                    <span class="project-name">\${escapeHtml(p.name)}</span>
                     <span class="project-time">\${formatDuration(p.totalSeconds)} (\${p.percent}%)</span>
                     <div class="project-bar-bg">
                       <div class="project-bar-fill" style="width: \${Math.max(p.percent, 0.5)}%"></div>
@@ -1012,6 +1194,8 @@ private async sendInitialState(): Promise<void> {
         document.getElementById('unrecorded-wrapper').innerHTML = unrecordedHtml;
         document.getElementById('projects-section').innerHTML = projectsHtml;
 
+        activeProject = null;
+        destroyProjectDetailChart();
         renderChart(summary.days);
         attachProjectNameHandlers();
       }
@@ -1198,46 +1382,281 @@ private async sendInitialState(): Promise<void> {
       }
 
 
-      var activePopoverProject = null;
-      var popoverEl = null;
+      var activeProject = null;
+      var projectDetailChart = null;
+      var projectDetailChartEl = null;
+      var projectDetailResizeObserver = null;
+      var projectDetailTooltip = null;
 
-      function showProjectPopover(name, anchorEl) {
-        hideProjectPopover();
-        activePopoverProject = name;
-        popoverEl = document.createElement('div');
-        popoverEl.className = 'project-popover';
-        popoverEl.textContent = '...';
-        document.body.appendChild(popoverEl);
-        var rect = anchorEl.getBoundingClientRect();
-        popoverEl.style.left = rect.left + 'px';
-        popoverEl.style.top = (rect.bottom + 8) + 'px';
+      function destroyProjectDetailChart() {
+        if (projectDetailResizeObserver) {
+          projectDetailResizeObserver.disconnect();
+          projectDetailResizeObserver = null;
+        }
+        if (projectDetailChart) {
+          projectDetailChart.destroy();
+          projectDetailChart = null;
+        }
+        if (projectDetailTooltip) {
+          projectDetailTooltip.remove();
+          projectDetailTooltip = null;
+        }
+        projectDetailChartEl = null;
       }
 
-      function hideProjectPopover() {
-        if (popoverEl) {
-          popoverEl.remove();
-          popoverEl = null;
+      function buildProjectDetailHtml(projectName) {
+        var summary = lastSummary;
+        if (!summary) {
+          return '<div class="project-detail-error">暂无数据</div>';
         }
-        activePopoverProject = null;
+        var proj = (summary.projects || []).find(function(p) { return p.name === projectName; });
+        var totalSeconds = proj ? proj.totalSeconds : 0;
+        var windowDays = (summary.days || []).length;
+        var dailyAvg = windowDays > 0 ? Math.round(totalSeconds / windowDays) : 0;
+        var activeDays = (summary.days || []).filter(function(d) {
+          return (d.projects || []).some(function(p) { return p.name === projectName && p.totalSeconds > 0; });
+        }).length;
+
+        return '<div class="project-detail-main">' +
+          '<div class="project-detail-row">' +
+          '<div class="project-detail-card project-detail-card--stats">' +
+          '<div class="project-detail-summary">' +
+          '<div class="project-detail-stat"><span class="project-detail-stat-label">总时长</span><span class="project-detail-stat-value">' + formatDuration(totalSeconds) + '</span></div>' +
+          '<div class="project-detail-stat"><span class="project-detail-stat-label">日均</span><span class="project-detail-stat-value">' + formatDuration(dailyAvg) + '</span></div>' +
+          '<div class="project-detail-stat"><span class="project-detail-stat-label">活跃天数</span><span class="project-detail-stat-value">' + activeDays + ' 天</span></div>' +
+          '</div>' +
+          '<div class="project-detail-ai" id="projectDetailAi"><div class="project-detail-loading">加载中…</div></div>' +
+          '</div>' +
+          '<div class="project-detail-card project-detail-card--donut">' +
+          '<div class="project-detail-donut-title">工具</div>' +
+          '<div class="project-detail-donut-wrap">' +
+          '<div class="project-detail-donut" id="projectDetailEditorDonut"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" stroke-width="15"/></svg><div class="project-detail-donut-center">-</div></div>' +
+          '<div class="project-detail-donut-legend" id="projectDetailEditorLegend"><div class="project-detail-loading">加载中…</div></div>' +
+          '</div>' +
+          '</div>' +
+          '<div class="project-detail-card project-detail-card--donut">' +
+          '<div class="project-detail-donut-title">AI 代码占比</div>' +
+          '<div class="project-detail-donut-wrap">' +
+          '<div class="project-detail-donut" id="projectDetailAiLineDonut"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" stroke-width="15"/></svg><div class="project-detail-donut-center">-</div></div>' +
+          '<div class="project-detail-donut-legend" id="projectDetailAiLineLegend"><div class="project-detail-loading">加载中…</div></div>' +
+          '</div>' +
+          '</div>' +
+          '</div>' +
+          '<div class="project-detail-chart" id="projectDetailChart"></div>' +
+          '</div>';
+      }
+
+      function toggleProjectDetail(itemEl) {
+        var name = itemEl.getAttribute('data-project');
+        if (!name) return;
+        if (activeProject === name) {
+          itemEl.classList.remove('expanded');
+          var detail = itemEl.querySelector('.project-detail');
+          if (detail) detail.remove();
+          destroyProjectDetailChart();
+          activeProject = null;
+          return;
+        }
+        var allItems = document.querySelectorAll('.project-item.expanded');
+        allItems.forEach(function(el) {
+          el.classList.remove('expanded');
+          var d = el.querySelector('.project-detail');
+          if (d) d.remove();
+        });
+        destroyProjectDetailChart();
+        activeProject = name;
+        itemEl.classList.add('expanded');
+        var detailEl = document.createElement('div');
+        detailEl.className = 'project-detail';
+        detailEl.innerHTML = buildProjectDetailHtml(name);
+        itemEl.appendChild(detailEl);
+        renderProjectDetailChart(name);
+        vscode.postMessage({ command: 'clickProject', projectName: name });
+      }
+
+      function renderProjectDetailChart(projectName) {
+        var chartEl = document.getElementById('projectDetailChart');
+        if (!chartEl || !window.uPlot || !lastSummary) return;
+        var days = lastSummary.days || [];
+        if (days.length === 0) return;
+        var timestamps = days.map(function(d) { return new Date(d.date + 'T00:00:00').getTime() / 1000; });
+        var values = days.map(function(d) {
+          var p = (d.projects || []).find(function(x) { return x.name === projectName; });
+          return (p ? p.totalSeconds : 0) / 3600;
+        });
+        projectDetailChartEl = chartEl;
+        var tooltip = document.createElement('div');
+        tooltip.className = 'project-detail-tooltip hidden';
+        document.body.appendChild(tooltip);
+        projectDetailTooltip = tooltip;
+        projectDetailChart = new uPlot({
+          width: chartEl.clientWidth,
+          height: 160,
+          axes: [
+            {
+              labelSize: 0,
+              stroke: '#6a6a6a',
+              space: function(u, idx, min, max, dim) {
+                var daySec = 86400;
+                var totalDays = (max - min) / daySec;
+                return Math.max(dim / totalDays, 50);
+              },
+              values: [
+                [3600 * 24 * 7, '{MM}-{DD}'],
+                [3600 * 24, '{MM}-{DD}'],
+              ],
+            },
+            {
+              labelSize: 0,
+              stroke: '#6a6a6a',
+              values: (u, splits) => splits.map(v => v.toFixed(1)),
+            }
+          ],
+          series: [
+            {},
+            {
+              stroke: '#3794ff',
+              fill: 'rgba(55, 148, 255, 0.2)',
+              width: 2,
+              spline: true,
+            }
+          ],
+          scales: { y: { auto: true } },
+          cursor: { show: true, focus: { prox: 16 }, y: false },
+          hooks: {
+            setCursor: [
+              (u) => {
+                const idx = u.cursor.idx;
+                if (idx == null || idx < 0 || idx >= days.length) {
+                  tooltip.classList.add('hidden');
+                  return;
+                }
+                const day = days[idx];
+                const p = (day.projects || []).find(x => x.name === projectName);
+                const secs = p ? p.totalSeconds : 0;
+                tooltip.innerHTML = \`
+                  <div class="project-detail-tooltip-title">\${day.date}</div>
+                  <div class="project-detail-tooltip-row total">
+                    <span class="project-detail-tooltip-label">\${escapeHtml(projectName)}</span>
+                    <span class="project-detail-tooltip-value">\${formatDuration(secs)}</span>
+                  </div>
+                \`;
+                const rect = chartEl.getBoundingClientRect();
+                const left = rect.left + u.cursor.left + 12;
+                const top = rect.top + u.cursor.top + 12;
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+                tooltip.classList.remove('hidden');
+              }
+            ],
+            setScale: [
+              () => {
+                tooltip.classList.add('hidden');
+              }
+            ]
+          }
+        }, [timestamps, values], chartEl);
+        chartEl.addEventListener('mouseleave', () => {
+          tooltip.classList.add('hidden');
+        });
+        projectDetailResizeObserver = new ResizeObserver(function() {
+          if (projectDetailChart && projectDetailChartEl) {
+            projectDetailChart.setSize({ width: projectDetailChartEl.clientWidth, height: 160 });
+          }
+        });
+        projectDetailResizeObserver.observe(chartEl);
       }
 
       function attachProjectNameHandlers() {
-        var names = document.querySelectorAll('.project-name[data-project]');
-        names.forEach(function(el) {
-          el.onclick = function(e) {
-            e.stopPropagation();
-            var name = el.getAttribute('data-project');
-            if (!name) return;
-            showProjectPopover(name, el);
-            vscode.postMessage({ command: 'clickProject', projectName: name });
+        var items = document.querySelectorAll('.project-item[data-project]');
+        items.forEach(function(el) {
+          el.onclick = function() {
+            toggleProjectDetail(el);
           };
         });
-        document.onclick = function() {
-          hideProjectPopover();
-        };
+      }
+
+      function renderProjectDetails(details) {
+        var aiEl = document.getElementById('projectDetailAi');
+        if (aiEl) {
+          var ai = details.ai || {};
+          var hasAi = (ai.aiTotalTokens || 0) > 0 || (ai.aiSessions || 0) > 0 || (ai.aiLineRatio || 0) > 0 || (ai.aiModelCost || 0) > 0;
+          if (!hasAi) {
+            aiEl.innerHTML = '<div class="project-detail-loading">暂无 AI 编码数据</div>';
+          } else {
+            var cost = (ai.aiModelCost || 0).toFixed(2);
+            var hitRate = ((ai.aiCacheHitRate || 0) * 100).toFixed(2);
+            aiEl.innerHTML =
+              '<div class="project-detail-ai-stats">' +
+              '<div class="project-detail-stat"><span class="project-detail-stat-label">总 token</span><span class="project-detail-stat-value">' + formatTokenCount(ai.aiTotalTokens) + '</span></div>' +
+              '<div class="project-detail-stat"><span class="project-detail-stat-label">模型成本</span><span class="project-detail-stat-value">$' + cost + '</span></div>' +
+              '<div class="project-detail-stat"><span class="project-detail-stat-label">缓存命中率</span><span class="project-detail-stat-value">' + hitRate + '%</span></div>' +
+              '</div>';
+          }
+        }
+        renderDonut('projectDetailEditorDonut', 'projectDetailEditorLegend', details.editors || []);
+        var aiLines = ai.aiLines || 0;
+        var humanLines = ai.humanLines || 0;
+        var aiLineItems = [];
+        if (aiLines > 0) aiLineItems.push({ name: 'AI', totalSeconds: aiLines, percent: 0 });
+        if (humanLines > 0) aiLineItems.push({ name: '人工', totalSeconds: humanLines, percent: 0 });
+        renderDonut('projectDetailAiLineDonut', 'projectDetailAiLineLegend', aiLineItems);
+      }
+
+      var DONUT_COLORS = ['#3794ff', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+
+      function renderDonut(donutId, legendId, items) {
+        var donutEl = document.getElementById(donutId);
+        var legendEl = document.getElementById(legendId);
+        if (!donutEl || !legendEl) return;
+        var R = 40;
+        var C = 2 * Math.PI * R;
+        var total = 0;
+        (items || []).forEach(function(i) { total += i.totalSeconds; });
+        var svgOpen = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+          '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="var(--border)" stroke-width="15"/>';
+        if (!items || items.length === 0 || total <= 0) {
+          donutEl.className = 'project-detail-donut donut-empty';
+          donutEl.innerHTML = svgOpen + '</svg><div class="project-detail-donut-center">-</div>';
+          legendEl.innerHTML = '<div class="project-detail-loading">暂无数据</div>';
+          return;
+        }
+        var acc = 0;
+        var segs = items.map(function(i, idx) {
+          var arcLen = (i.totalSeconds / total) * C;
+          var color = DONUT_COLORS[idx % DONUT_COLORS.length];
+          var seg = '<circle cx="50" cy="50" r="' + R + '" fill="none" stroke="' + color + '" stroke-width="15"' +
+            ' stroke-dasharray="' + arcLen.toFixed(3) + ' ' + C.toFixed(3) + '"' +
+            ' stroke-dashoffset="' + (-acc).toFixed(3) + '"' +
+            ' transform="rotate(-90 50 50)"/>';
+          acc += arcLen;
+          return seg;
+        }).join('');
+        donutEl.className = 'project-detail-donut';
+        donutEl.innerHTML = svgOpen + segs + '</svg><div class="project-detail-donut-center">' + items.length + ' 种</div>';
+        legendEl.innerHTML = items.slice(0, 6).map(function(i, idx) {
+          var pct = (i.totalSeconds / total * 100);
+          var pctText = pct >= 99.95 ? '100' : pct.toFixed(1);
+          return '<div class="project-detail-donut-legend-item">' +
+            '<span class="project-detail-donut-dot" style="background:' + DONUT_COLORS[idx % DONUT_COLORS.length] + '"></span>' +
+            '<span class="project-detail-donut-name">' + escapeHtml(i.name) + '</span>' +
+            '<span class="project-detail-donut-pct">' + pctText + '%</span>' +
+            '</div>';
+        }).join('');
       }
 
       function pad2(n) { return String(n).padStart(2, '0'); }
+
+      function formatTokenCount(n) {
+        n = Number(n || 0);
+        if (n >= 100000000) {
+          return (n / 100000000).toFixed(2) + '亿';
+        }
+        if (n >= 10000) {
+          return (n / 10000).toFixed(2) + '万';
+        }
+        return String(n);
+      }
 
       function formatDateKey(date) {
         return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
@@ -1515,19 +1934,25 @@ private async sendInitialState(): Promise<void> {
           case 'projectDistributionError':
             setDistributionSection('<div class="distribution-error">加载失败：' + escapeHtml(message.message || '未知错误') + '</div>');
             break;
-          case 'projectAllTimeLoading':
-            if (activePopoverProject === message.projectName && popoverEl) {
-              popoverEl.textContent = '...';
+          case 'projectDetailsLoading':
+            if (activeProject === message.projectName) {
+              var aiEl = document.getElementById('projectDetailAi');
+              if (aiEl) aiEl.innerHTML = '<div class="project-detail-loading">加载中…</div>';
             }
             break;
-          case 'projectAllTime':
-            if (activePopoverProject === message.projectName && popoverEl) {
-              popoverEl.textContent = '总计 ' + formatDuration(message.totalSeconds);
+          case 'projectDetails':
+            if (activeProject === message.projectName) {
+              renderProjectDetails(message.details);
             }
             break;
-          case 'projectAllTimeError':
-            if (activePopoverProject === message.projectName && popoverEl) {
-              popoverEl.textContent = '获取失败';
+          case 'projectDetailsError':
+            if (activeProject === message.projectName) {
+              var aiEl = document.getElementById('projectDetailAi');
+              if (aiEl) aiEl.innerHTML = '<div class="project-detail-error">加载失败：' + escapeHtml(message.message || '未知错误') + '</div>';
+              ['projectDetailEditorLegend', 'projectDetailAiLineLegend'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.innerHTML = '<div class="project-detail-error">加载失败</div>';
+              });
             }
             break;
           case 'error':
