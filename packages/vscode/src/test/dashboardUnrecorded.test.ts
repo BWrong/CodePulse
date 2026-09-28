@@ -32,6 +32,30 @@ const source = fs.readFileSync(
   'utf8'
 );
 
+suite('minProjectDurationMinutes default', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')
+  ) as {
+    contributes: {
+      configuration: { properties: Record<string, { default: number }> };
+    };
+  };
+
+  test('package.json 默认值与 dashboard.ts 兜底值一致', () => {
+    const configDefault =
+      pkg.contributes.configuration.properties['codepulse.minProjectDurationMinutes'].default;
+    const fallback = source.match(
+      /get<number>\('minProjectDurationMinutes',\s*(\d+)\)/
+    );
+    assert.ok(fallback, 'dashboard.ts 中未找到 minProjectDurationMinutes 兜底值');
+    assert.strictEqual(
+      Number(fallback[1]),
+      configDefault,
+      '默认值写在 package.json 和 dashboard.ts 两处，改一个必须改另一个'
+    );
+  });
+});
+
 suite('dashboard getUnrecordedProjects', () => {
   const getUnrecordedProjects = new Function(
     `${extractFunctions(source, ['getUnrecordedProjects'])}; return getUnrecordedProjects;`
@@ -119,7 +143,7 @@ suite('dashboard computeUnrecorded', () => {
     assert.strictEqual(computeUnrecorded(null, null), null);
   });
 
-  test('default 5 minute (300s) threshold filters projects under 300s', () => {
+  test('300s threshold filters projects under 300s', () => {
     const computeUnrecordedDefault = new Function(
       'MIN_PROJECT_SECONDS',
       `${extractFunctions(source, ['getUnrecordedProjects', 'filterProjectsByMinDuration', 'computeUnrecorded'])}; return computeUnrecorded;`

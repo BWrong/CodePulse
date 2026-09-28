@@ -19,14 +19,14 @@
  
  | 配置项 | 类型 | 默认值 | 说明 |
  |--------|------|--------|------|
- | `codepulse.minProjectDurationMinutes` | number | `5` | 忽略编码时长低于该值（分钟）的项目统计。设为 `0` 表示不过滤。 |
- 
- 在 VS Code `settings.json` 中按需调整：
- 
- ```json
- {
-   "codepulse.minProjectDurationMinutes": 3
- }
+| `codepulse.minProjectDurationMinutes` | number | `10` | 忽略编码时长低于该值（分钟）的项目统计。设为 `0` 表示不过滤。 |
+
+在 VS Code `settings.json` 中按需调整：
+
+```json
+{
+   "codepulse.minProjectDurationMinutes": 10
+}
  ```
  
  ## 需求文档

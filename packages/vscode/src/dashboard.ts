@@ -241,7 +241,7 @@ private async sendInitialState(): Promise<void> {
    }
 
    private getHtmlForWebview(extensionUri: vscode.Uri): string {
-    const minProjectMinutes = vscode.workspace.getConfiguration('codepulse').get<number>('minProjectDurationMinutes', 5);
+    const minProjectMinutes = vscode.workspace.getConfiguration('codepulse').get<number>('minProjectDurationMinutes', 10);
     const minProjectSeconds = Math.max(0, Math.round(minProjectMinutes * 60));
     const uplotJsUri = this.panel.webview.asWebviewUri(
       vscode.Uri.joinPath(extensionUri, 'media', 'uPlot.iife.min.js')
