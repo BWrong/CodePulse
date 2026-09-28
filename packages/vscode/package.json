@@ -42,6 +42,7 @@
     "test": "mocha --ui tdd out/test/**/*.test.js",
     "predev": "npm run compile",
     "dev": "node scripts/dev.js",
+    "reload": "node scripts/reload.js",
     "package": "mkdir -p dist && vsce package --out dist/",
     "install:extension": "code --install-extension dist/codepulse-0.0.1.vsix"
   },
