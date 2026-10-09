@@ -2,7 +2,8 @@
  import { CodingSummary, ProjectDayDistribution, ProjectDetails, TimeCollector } from './models';
  import { getLastRecordedDate, markTodayAsRecorded } from './recordedDate';
 
- export type RangeDays = 7 | 30 | 90;
+ // WakaTime summaries 接口单次请求上限为 370 天（实测 371 天返回 400）
+export type RangeDays = 7 | 30 | 90 | 180 | 365;
 
  export interface DashboardMessage {
    command: 'ready' | 'refresh' | 'changeRange' | 'markRecorded' | 'openExternal' | 'changeProjectDay' | 'clickProject';
@@ -952,6 +953,8 @@ private async sendInitialState(): Promise<void> {
       <button class="tab active" data-days="7">7 天</button>
       <button class="tab" data-days="30">30 天</button>
       <button class="tab" data-days="90">90 天</button>
+      <button class="tab" data-days="180">半年</button>
+      <button class="tab" data-days="365">1 年</button>
     </div>
     <div class="actions">
       <button id="markRecorded" class="secondary">记录完成</button>
