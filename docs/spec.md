@@ -13,7 +13,7 @@
  开发一个名为 **CodePulse** 的 VS Code 插件：
 
  1. 依赖现有的 WakaTime VS Code 插件来采集心跳和识别项目。
- 2. 复用 WakaTime 插件存储在 `~/.wakatime.cfg` 中的 API Key，无需用户额外配置。
+ 2. 凭证来源：命令「CodePulse: 设置 WakaTime Token」写入的 SecretStorage；未设置时回退到 WakaTime 插件存储在 `~/.wakatime.cfg` 中的 `api_key`（WakaTime 从 2026-11-01 起不再允许用 API Key 直连读接口）。
  3. 调用 WakaTime 的 `/api/v1/users/current/summaries` 接口获取 7/30/90 天的汇总数据。
  4. 在 VS Code Webview 中渲染一个轻量的单页面板，使用原生 HTML/CSS/TypeScript 和 uPlot 图表库。
  5. 在状态栏显示今日编码时长，点击后打开面板。
@@ -50,12 +50,13 @@
 24. 作为一名开发者，我希望通过左右箭头切换时段分布的日期，以便浏览历史日期的分布。
 25. 作为一名开发者，我希望点击项目查看该项目在所选时间范围内的编码详情（每日趋势、AI 统计），以便了解项目投入构成。
 26. 作为一名开发者，我希望切换 7/30/90 天范围时各模块独立更新，不要整体闪烁。
+27. 作为一名开发者，我希望用一条命令保存 WakaTime OAuth token（存系统钥匙串，不进设置同步），以便凭证明文不落在 `settings.json` 里。
 
  ## 实现决策
 
- - **VS Code 扩展宿主**：插件运行在 VS Code 扩展宿主中，负责读取 `~/.wakatime.cfg`、请求 WakaTime 数据、注册打开面板的命令。
+ - **VS Code 扩展宿主**：插件运行在 VS Code 扩展宿主中，负责解析凭证、请求 WakaTime 数据、注册打开面板的命令。
  - **采集器抽象**：定义 `TimeCollector` 接口，例如 `getSummaries(start: Date, end: Date)`，返回规范化的汇总数据结构。首个实现为 `WakaTimeCollector`。
- - **WakaTime 采集器**：从 `~/.wakatime.cfg` 的 `[settings]` 段读取 `api_key`，使用 HTTP Basic Auth 请求 `https://wakatime.com/api/v1/users/current/summaries`。
+ - **WakaTime 采集器**：凭证来自 SecretStorage（命令 `CodePulse: 设置 WakaTime Token` 写入），未设置时回退到 `~/.wakatime.cfg` 的 `[settings]` 段 `api_key`；统一把凭证放在 `api_key` 查询参数上请求 `https://wakatime.com/api/v1/users/current/summaries`（WakaTime 明确支持 OAuth token 放该参数，过渡期现有 API Key 仍可用）。
  - **Dashboard Webview**：单个 Webview 面板，顶部有全局 7/30/90 tab 切换。使用原生 HTML/CSS/TypeScript 和 uPlot 绘制柱状图。数据通过 `postMessage` 传递。
  - **项目最小时长过滤**：为减少噪声，编码时长低于阈值的项目不纳入项目视图、趋势图、未记录模块、时段分布（口径一致）。阈值通过配置项 `codepulse.minProjectDurationMinutes` 设置，单位为分钟，默认 `10`，设为 `0` 表示不过滤。配置在打开面板时注入 Webview。
  - **趋势图过滤**：每日时长按「当天 ≥ 项目最小时长阈值的项目之和」计算，低于阈值的项目不纳入趋势线与 tooltip，与项目视图、未记录模块口径一致。
@@ -78,7 +79,7 @@
 
  - **聚合逻辑单元测试**：将原始 WakaTime 汇总数据转换为每日总时长和项目总时长的模块，应使用模拟的 WakaTime 响应进行单元测试。
  - **Webview 手动测试**：在 VS Code 中打开面板，切换 7/30/90 tab，验证 uPlot 图表和项目列表渲染正常。
- - **集成测试**：使用用户的 API Key，手动验证 7/30/90 三个时间范围都能从 WakaTime API 正常返回数据。
+ - **集成测试**：使用用户凭证（OAuth token 或 API Key），手动验证 7/30/90 三个时间范围都能从 WakaTime API 正常返回数据。
  - **设置同步测试**：验证在 A 机器设置的 `lastRecordedDate`，在开启 VS Code 设置同步的 B 机器上能同步过来。
  - **不测试 VS Code API 胶水层**：命令注册、Webview 创建、`postMessage` 等视为薄胶水层，由端到端手动测试覆盖。
  - **不测试 WakaTime HTTP 客户端**：实际 HTTP 请求视为简单适配器，失败路径和手动测试覆盖即可。
@@ -92,7 +93,6 @@
  - 按文件或按语言的细分公司。
  - 自定义项目名映射或重命名。
  - WakaTime 响应缓存。
- - 通过 OAuth 认证 WakaTime（复用 `~/.wakatime.cfg` 中的 API Key）。
  - 排行榜、公开资料、团队功能。
  - 移动端或浏览器端支持。
 

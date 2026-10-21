@@ -21,6 +21,11 @@
         "command": "codepulse.openDashboard",
         "title": "Open Dashboard",
         "category": "CodePulse"
+      },
+      {
+        "command": "codepulse.setWakatimeToken",
+        "title": "设置 WakaTime Token",
+        "category": "CodePulse"
       }
     ],
     "configuration": {

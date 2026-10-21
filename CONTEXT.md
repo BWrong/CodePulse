@@ -44,6 +44,14 @@
  - **数据获取**：摘要与每日趋势之外的内容在展开时调用 `Summaries?project=xxx`（该接口传 `project` 参数后返回的 `grand_total` 即该项目总时长与 AI 统计），按「项目:天数」做内存缓存，切换 7/30/90 不会串数据。
  - **为何不用 Stats 接口**：Stats 接口不支持 `project` 过滤，无法按项目取 AI 统计，故用 Summaries + `project` 参数。
 
+ ### WakaTime 凭证迁移 OAuth（政策 2026-11-01 生效）
+
+ - **背景**：WakaTime 从 2026-11-01 起 API Key 只允许官方插件上报心跳，直连读接口（summaries/durations/status_bar/data_dumps）必须改用 OAuth token。
+ - **认证方式**：凭证统一放 `api_key` 查询参数，不再用 HTTP Basic Auth。WakaTime 明确说明 OAuth token 可以填在 `api_key` 参数里，且过渡期旧 API Key 仍能通过同一路径工作，所以只需一套代码路径。
+ - **凭证解析顺序**：SecretStorage（命令 `CodePulse: 设置 WakaTime Token` 写入）→ `~/.wakatime.cfg` 的 `api_key`。
+ - **为何用 SecretStorage 而不放设置项**：token 是长期个人凭证；`settings.json` 是明文且会被 Settings Sync 同步，且 VS Code 无法按单个键排除同步。SecretStorage 存系统钥匙串，不跨机同步，代价是换机器需重填一次。
+ - **为何保留 `~/.wakatime.cfg` 回退**：过渡期用户不填 token 也能用，不强制迁移。
+
  ## 待确认
 
  - 未记录模块中是否需要显示"未记录期间起始日期"？

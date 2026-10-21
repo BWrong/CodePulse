@@ -13,7 +13,16 @@
  
  ## 依赖
  
- 本插件依赖 [WakaTime](https://wakatime.com/) VS Code 插件采集编码心跳，并复用其 `~/.wakatime.cfg` 中的 API Key。
+ 本插件依赖 [WakaTime](https://wakatime.com/) 采集编码心跳。WakaTime 从 2026-11-01 起不再允许用 API Key 直连读接口，需改用 OAuth token。
+
+## 凭证
+
+按以下顺序解析，命中即用：
+
+1. 命令 `CodePulse: 设置 WakaTime Token` 保存的值（系统钥匙串，不进 Settings Sync）
+2. `~/.wakatime.cfg` 中的 `api_key`（复用 WakaTime 官方插件登录态，方便过渡期）
+
+OAuth token 在 [wakatime.com/oauth](https://wakatime.com/oauth) 获取。
  
  ## 配置
  

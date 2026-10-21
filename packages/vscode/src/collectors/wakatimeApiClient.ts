@@ -12,11 +12,11 @@ import { formatDate } from '../utils/date';
 function friendlyErrorMessage(statusCode: number | undefined): string {
   switch (statusCode) {
     case 401:
-      return 'WakaTime API Key 无效，请检查 ~/.wakatime.cfg 中的 api_key。';
+      return 'WakaTime 凭证无效，请运行「CodePulse: 设置 WakaTime Token」更新 token，或检查 ~/.wakatime.cfg 中的 api_key。';
     case 402:
       return '该功能需要 WakaTime 付费账号。';
     case 403:
-      return '没有权限访问 WakaTime 数据，请确认 API Key 已激活。';
+      return '没有权限访问 WakaTime 数据，请确认凭证有效且账号已激活。';
     case 404:
       return '未找到 WakaTime 用户数据。';
     case 429:
@@ -33,22 +33,29 @@ function friendlyErrorMessage(statusCode: number | undefined): string {
   }
 }
 
+/**
+ * 凭证走 api_key 参数：WakaTime 明确说明 OAuth token 可放在这里，
+ * 2026-11-01 起 API Key 不再允许直连读接口，只能用于插件上报。
+ */
+export function withCredential(url: string, credential: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}api_key=${encodeURIComponent(credential)}`;
+}
+
 function requestJson<T>(
-  apiKey: string,
+  credential: string,
   url: string,
   options: { method?: 'GET' | 'POST'; body?: unknown } = {}
 ): Promise<T> {
-  const auth = Buffer.from(`${apiKey}:`).toString('base64');
+  const authUrl = withCredential(url, credential);
   const payload = options.body === undefined ? undefined : JSON.stringify(options.body);
 
   return new Promise((resolve, reject) => {
     let timedOut = false;
     const req = https.request(
-      url,
+      authUrl,
       {
         method: options.method ?? 'GET',
         headers: {
-          Authorization: `Basic ${auth}`,
           Accept: 'application/json',
           ...(payload
             ? {

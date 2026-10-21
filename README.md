@@ -47,7 +47,7 @@ Dashboard 的 HTML/CSS/JS 全部内联在 `src/dashboard.ts` 的 `getHtmlForWebv
 
 ### 数据来源
 
-调试窗口读取的是本机真实的 `~/.wakatime.cfg`，因此需要先安装并登录 [WakaTime](https://wakatime.com/) 的 VS Code 插件，否则打开面板会提示「未找到 WakaTime API Key」。
+调试窗口读取的是本机真实的凭证：命令「CodePulse: 设置 WakaTime Token」存的系统钥匙串，没设时回退到 `~/.wakatime.cfg` 的 `api_key`。都没有时打开面板会提示「未找到 WakaTime 凭证」。
 
 ## 需求文档
 
