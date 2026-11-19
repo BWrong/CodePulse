@@ -1476,11 +1476,10 @@ private async sendInitialState(): Promise<void> {
         }
         var proj = (summary.projects || []).find(function(p) { return p.name === projectName; });
         var totalSeconds = proj ? proj.totalSeconds : 0;
-        var windowDays = (summary.days || []).length;
-        var dailyAvg = windowDays > 0 ? Math.round(totalSeconds / windowDays) : 0;
         var activeDays = (summary.days || []).filter(function(d) {
           return (d.projects || []).some(function(p) { return p.name === projectName && p.totalSeconds > 0; });
         }).length;
+        var dailyAvg = activeDays > 0 ? Math.round(totalSeconds / activeDays) : 0;
 
         return '<div class="project-detail-main">' +
           '<div class="project-detail-row">' +
