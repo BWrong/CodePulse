@@ -5,6 +5,9 @@
  // WakaTime summaries 接口单次请求上限为 370 天（实测 371 天返回 400）
 export type RangeDays = 7 | 30 | 90 | 180 | 365;
 
+/** 汇总缓存有效期：区间相对今天，过期后重拉，避免长时间显示旧数据。 */
+const SUMMARY_CACHE_TTL_MS = 60_000;
+
  export interface DashboardMessage {
    command: 'ready' | 'refresh' | 'changeRange' | 'markRecorded' | 'openExternal' | 'changeProjectDay' | 'clickProject';
    days?: RangeDays;
@@ -34,6 +37,7 @@ export type RangeDays = 7 | 30 | 90 | 180 | 365;
   private isLoadingProject = false;
   private distributionCache = new Map<string, ProjectDayDistribution>();
   private projectDetailsCache = new Map<string, ProjectDetails>();
+  private summaryCache = new Map<RangeDays, { at: number; summary: CodingSummary }>();
 
    private constructor(extensionUri: vscode.Uri, state: DashboardState) {
      this.collector = state.collector;
@@ -86,7 +90,8 @@ export type RangeDays = 7 | 30 | 90 | 180 | 365;
            await this.sendInitialState();
            break;
          case 'refresh':
-           await this.loadAndSendData();
+           this.summaryCache.clear();
+           await this.loadAndSendData(true);
            break;
          case 'changeRange':
            if (message.days) {
@@ -96,7 +101,10 @@ export type RangeDays = 7 | 30 | 90 | 180 | 365;
            break;
          case 'markRecorded':
            await markTodayAsRecorded(this.globalState);
-           await this.loadAndSendData();
+           this.panel.webview.postMessage({
+             command: 'recordedUpdated',
+             lastRecordedDate: getLastRecordedDate(this.globalState),
+           });
            break;
          case 'changeProjectDay':
            if (message.projectDay) {
@@ -207,29 +215,41 @@ private async sendInitialState(): Promise<void> {
     await this.loadAndSendProjectDistribution();
    }
 
-   private async loadAndSendData(): Promise<void> {
+   private async loadAndSendData(force = false): Promise<void> {
      if (this.isLoading) {
        return;
      }
+
+     const cached = force ? undefined : this.summaryCache.get(this.currentDays);
+     if (cached && Date.now() - cached.at < SUMMARY_CACHE_TTL_MS) {
+       this.postSummary(cached.summary);
+       return;
+     }
+
      this.isLoading = true;
      this.panel.webview.postMessage({ command: 'loading' });
 
      try {
        const { start, end } = this.getDateRange(this.currentDays);
        const summary = await this.collector.getSummaries(start, end);
-       this.panel.webview.postMessage({
-         command: 'update',
-         days: this.currentDays,
-         summary,
-         lastRecordedDate: getLastRecordedDate(this.globalState),
-       });
-       this.onDataUpdated?.(summary);
+       this.summaryCache.set(this.currentDays, { at: Date.now(), summary });
+       this.postSummary(summary);
      } catch (error) {
        const message = error instanceof Error ? error.message : String(error);
        this.panel.webview.postMessage({ command: 'error', message });
      } finally {
        this.isLoading = false;
      }
+   }
+
+   private postSummary(summary: CodingSummary): void {
+     this.panel.webview.postMessage({
+       command: 'update',
+       days: this.currentDays,
+       summary,
+       lastRecordedDate: getLastRecordedDate(this.globalState),
+     });
+     this.onDataUpdated?.(summary);
    }
 
    private getDateRange(days: RangeDays): { start: Date; end: Date } {
@@ -652,15 +672,54 @@ private async sendInitialState(): Promise<void> {
     }
     .unrecorded-list {
       flex: 1 1 300px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      min-width: 280px;
+    }
+    .unrecorded-card {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      min-width: 280px;
+      gap: 4px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      min-width: 0;
+    }
+    .unrecorded-card-name {
+      font-size: 13px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .unrecorded-card-meta {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .unrecorded-card-bar {
+      height: 4px;
+      margin-top: 2px;
+      background: var(--card-bg);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .unrecorded-card-fill {
+      height: 100%;
+      min-width: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #3794ff 0%, #2196f3 100%);
     }
     .unrecorded-empty {
       color: var(--muted);
       font-size: 13px;
       padding: 12px 0;
+      grid-column: 1 / -1;
+    }
+    .unrecorded-action {
+      margin-top: 12px;
+      align-self: flex-start;
     }
 
     .info-icon {
@@ -687,7 +746,9 @@ private async sendInitialState(): Promise<void> {
       padding: 4px 8px;
       border-radius: 4px;
       font-size: 11px;
-      white-space: nowrap;
+      width: max-content;
+      max-width: 240px;
+      white-space: normal;
       z-index: 100;
       opacity: 0;
       transition: opacity 0.15s;
@@ -957,7 +1018,6 @@ private async sendInitialState(): Promise<void> {
       <button class="tab" data-days="365">1 年</button>
     </div>
     <div class="actions">
-      <button id="markRecorded" class="secondary">记录完成</button>
       <button id="openWakaTime" class="secondary">WakaTime</button>
       <button id="refresh">刷新</button>
     </div>
@@ -981,7 +1041,6 @@ private async sendInitialState(): Promise<void> {
       const contentEl = document.getElementById('content');
       const tabEls = document.querySelectorAll('.tab');
       const refreshBtn = document.getElementById('refresh');
-      const markRecordedBtn = document.getElementById('markRecorded');
 
       function formatDuration(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -1118,10 +1177,10 @@ private async sendInitialState(): Promise<void> {
         if (document.getElementById('stats-section')) return;
         contentEl.innerHTML =
           '<div id="stats-section"></div>' +
-          '<div id="unrecorded-wrapper"></div>' +
           '<div class="section"><div class="chart-title-row"><span class="section-title" style="margin-bottom:0">每日趋势</span><button id="resetChart" class="secondary" style="padding:2px 10px;font-size:12px;">重置</button></div><div id="chart"></div></div>' +
           '<div class="section"><div id="distributionSection"><div class="distribution-loading-state">加载中…</div></div></div>' +
-          '<div id="projects-section"></div>';
+          '<div id="projects-section"></div>' +
+          '<div id="unrecorded-wrapper"></div>';
       }
 
       function renderEmpty() {
@@ -1209,7 +1268,8 @@ private async sendInitialState(): Promise<void> {
             <div class="unrecorded-section">
               <div class="unrecorded-main">
                 <div class="unrecorded-label">未记录项目</div>
-                <div class="unrecorded-empty">尚未记录过，点击顶部"记录完成"按钮开始</div>
+                <div class="unrecorded-empty">尚未记录过，点击“记录完成”按钮开始</div>
+                <button id="markRecorded" class="secondary unrecorded-action">记录完成</button>
               </div>
             </div>
           \`;
@@ -1219,9 +1279,10 @@ private async sendInitialState(): Promise<void> {
           return \`
             <div class="unrecorded-section">
               <div class="unrecorded-main">
-                <div class="unrecorded-label">未记录项目<span class="info-icon" data-tip="数据截止时间：\${getDataEndDate(currentLastRecordedDate) || '无'}">ⓘ</span></div>
+                <div class="unrecorded-label">未记录项目<span class="info-icon" data-tip="数据截止时间：\${getDataEndDate(currentLastRecordedDate) || '无'}。记录日当天数据仍计入未记录">ⓘ</span></div>
                <div class="unrecorded-total">0m</div>
-                <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击顶部“记录完成”按钮开始'}</div>
+                <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击“记录完成”按钮开始'}</div>
+                <button id="markRecorded" class="secondary unrecorded-action">记录完成</button>
              </div>
               <div class="unrecorded-list">
                 <div class="unrecorded-empty">暂无未记录时长</div>
@@ -1231,11 +1292,11 @@ private async sendInitialState(): Promise<void> {
         }
 
         const listHtml = unrecorded.projects.map(p => \`
-          <div class="project-item">
-            <span class="project-name">\${escapeHtml(p.name)}</span>
-            <span class="project-time">\${formatDuration(p.totalSeconds)} (\${p.percent}%)</span>
-            <div class="project-bar-bg">
-              <div class="project-bar-fill" style="width: \${Math.max(p.percent, 0.5)}%"></div>
+          <div class="unrecorded-card">
+            <div class="unrecorded-card-name" title="\${escapeHtml(p.name)}">\${escapeHtml(p.name)}</div>
+            <div class="unrecorded-card-meta">\${formatDuration(p.totalSeconds)} · \${p.percent}%</div>
+            <div class="unrecorded-card-bar">
+              <div class="unrecorded-card-fill" style="width: \${Math.max(p.percent, 0.5)}%"></div>
             </div>
           </div>
         \`).join('');
@@ -1243,9 +1304,10 @@ private async sendInitialState(): Promise<void> {
         return \`
           <div class="unrecorded-section">
             <div class="unrecorded-main">
-              <div class="unrecorded-label">未记录项目<span class="info-icon" data-tip="数据截止时间：\${getDataEndDate(currentLastRecordedDate) || '无'}">ⓘ</span></div>
+              <div class="unrecorded-label">未记录项目<span class="info-icon" data-tip="数据截止时间：\${getDataEndDate(currentLastRecordedDate) || '无'}。记录日当天数据仍计入未记录">ⓘ</span></div>
              <div class="unrecorded-total">\${formatDuration(unrecorded.totalSeconds)}</div>
-              <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击顶部“记录完成”按钮开始'}</div>
+              <div class="unrecorded-sub">\${currentLastRecordedDate ? \`上次记录时间：\${escapeHtml(currentLastRecordedDate)}\` : '尚未记录过，点击“记录完成”按钮开始'}</div>
+              <button id="markRecorded" class="secondary unrecorded-action">记录完成</button>
            </div>
             <div class="unrecorded-list">
               \${listHtml}
@@ -1899,8 +1961,10 @@ private async sendInitialState(): Promise<void> {
         vscode.postMessage({ command: 'refresh' });
       });
 
-      markRecordedBtn.addEventListener('click', () => {
-        vscode.postMessage({ command: 'markRecorded' });
+      contentEl.addEventListener('click', (event) => {
+        if (event.target.closest('#markRecorded')) {
+          vscode.postMessage({ command: 'markRecorded' });
+        }
       });
 
       const openWakaTimeLink = document.getElementById('openWakaTime');
