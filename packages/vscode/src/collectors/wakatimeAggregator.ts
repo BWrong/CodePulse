@@ -65,6 +65,8 @@
      }
    }
 
+   const activeDays = days.filter(d => d.totalSeconds > 0).length;
+
    const projects: ProjectSummary[] = Array.from(projectMap.entries())
      .map(([name, projectSeconds]) => ({
        name,
@@ -77,7 +79,7 @@ return {
      startDate,
      endDate,
      totalSeconds,
-     dailyAverageSeconds: windowDays > 0 ? Math.round(totalSeconds / windowDays) : 0,
+     dailyAverageSeconds: activeDays > 0 ? Math.round(totalSeconds / activeDays) : 0,
      days,
      projects,
    };

@@ -15,6 +15,7 @@
  - 保持 `src/dashboard.ts` 内嵌 HTML/CSS/JS 架构。
  - 使用 VS Code CSS 变量（`--vscode-*`）适配深色/浅色主题。
  - 顶部统计卡片顺序：总时长、今天、每天、最活跃。
+ - 「每天」= 总时长 / 有编码的天数（排除零活跃天，同 WakaTime 的 days_minus_holidays 口径），不是除以区间日历天数。
  - 「最活跃」展示编码时长最多的一天：上方显示该天时长，下方显示该天日期。
  - 趋势图使用 uPlot，自定义 tooltip，隐藏图例与轴名，平滑曲线。
  - 趋势图每日时长按「当天 ≥ 项目最小时长阈值的项目之和」计算，低于阈值的项目不纳入趋势线与 tooltip（与项目视图、未记录模块口径一致，阈值由 `codepulse.minProjectDurationMinutes` 控制，默认 10 分钟）。

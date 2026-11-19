@@ -121,7 +121,7 @@
      assert.deepStrictEqual(summary.projects.map(p => p.name), ['large', 'small']);
    });
 
-  test('daily average is total over fixed window days', () => {
+  test('daily average divides by days with activity, not window days', () => {
     const response: WakaTimeSummariesResponse = {
       data: [
         {
@@ -136,7 +136,7 @@
     const summary = aggregateSummaries(response, start, end);
 
     assert.strictEqual(summary.totalSeconds, 7200);
-    assert.strictEqual(summary.dailyAverageSeconds, Math.round(7200 / 7));
+    assert.strictEqual(summary.dailyAverageSeconds, 7200);
   });
 
   test('fills missing days with zero seconds', () => {
@@ -162,6 +162,6 @@
       ]
     );
     assert.strictEqual(summary.totalSeconds, 3600);
-    assert.strictEqual(summary.dailyAverageSeconds, Math.round(3600 / 3));
+    assert.strictEqual(summary.dailyAverageSeconds, 3600);
   });
  });

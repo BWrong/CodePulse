@@ -1802,7 +1802,7 @@ private async sendInitialState(): Promise<void> {
       }
 
       function renderDistributionBody(distribution) {
-        var projects = (distribution.projects || []).filter(function(p) { return p.totalSeconds >= 60; });
+        var projects = (distribution.projects || []).filter(function(p) { return p.totalSeconds >= MIN_PROJECT_SECONDS; });
         if (projects.length === 0) {
           return '<div class="distribution-empty">所选日期暂无编码记录</div>';
         }
