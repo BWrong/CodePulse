@@ -2,7 +2,8 @@
 
  ## 领域
 
- CodePulse 是一个 VS Code 扩展，帮助开发者追踪和抄录自己的编码时间。
+ CodePulse 是一个编码时间追踪插件，帮助开发者追踪和抄录自己的编码时间。两个宿主实现同一套功能：
+VS Code 扩展（`packages/vscode`）与 Orca 插件（`packages/orca`）。
 
  - **编码时长**：通过 WakaTime 插件采集的每日心跳数据，按项目和日期汇总。
  - **抄表辅助**：用户需要定期把各项目工时抄到外部成本表（如腾讯文档）。插件提供"记录完成"按钮来标记最后一次抄表的日期时间。
@@ -20,6 +21,16 @@
  - 趋势图使用 uPlot，自定义 tooltip，隐藏图例与轴名，平滑曲线。
  - 趋势图每日时长按「当天 ≥ 项目最小时长阈值的项目之和」计算，低于阈值的项目不纳入趋势线与 tooltip（与项目视图、未记录模块口径一致，阈值由 `codepulse.minProjectDurationMinutes` 控制，默认 10 分钟）。
  - 项目视图进度条使用 `var(--accent)` 填充，`var(--card-bg)` + 边框作为背景，确保主题可见性。
+
+ ### Orca 插件（`packages/orca`）
+
+ - 功能与 VS Code 版对齐：状态栏今日时长、7/30/90/180/365 天趋势、项目分布、项目详情环形图、AI 统计、未记录模块（按 `showUnrecordedProjects` 开关，默认不显示）。
+ - 与 VS Code 版的差异只来自宿主限制：状态栏只显示今日时长、不挂点击（Orca 没有「打开插件面板」的内置动作，`shell.openExternal` 也不对 worker 开放、还要求帧内手势），面板从右侧栏图标进入，网页链接由面板里的按钮打开；uPlot 内联进 `panel.html`（面板 CSP 没有 `'self'`）；WakaTime 请求只能在插件的 Node worker 里发（面板帧 `connect-src 'none'`）。
+ - 顶部时间范围文案统一用天数：`7 天 / 30 天 / 90 天 / 180 天 / 365 天`，因为数据就是按天数截的（VS Code 版是 tab，Orca 版因为面板窄改成下拉，操作按钮也改成纯图标 + title 提示）。
+ - 前端渲染逻辑与协议原样复用 VS Code 版：`panel.html` 里仍是 `window 'message'` + `switch(command)`，入口处一层 shim 把 `postMessage` 转成 `orca.plugin.request`。
+ - 状态栏文案由 worker 每 5 分钟用 `statusBar.update` 推送；缺凭证时显示「未配置凭证」并在面板顶部给输入框。
+ - 两个设置项走 `contributes.settings`（`minProjectDurationMinutes`、`showUnrecordedProjects`），由 worker 每次 `update` 消息带给面板——设置改了不用重装插件，但要重开面板才生效。
+ - 详见 [ADR 0001](docs/adr/0001-orca-plugin-shape.md)。
 
  ### 未记录项目模块（#10 已完成）
 
@@ -52,6 +63,8 @@
  - **凭证解析顺序**：SecretStorage（命令 `CodePulse: 设置 WakaTime Token` 写入）→ `~/.wakatime.cfg` 的 `api_key`。
  - **为何用 SecretStorage 而不放设置项**：token 是长期个人凭证；`settings.json` 是明文且会被 Settings Sync 同步，且 VS Code 无法按单个键排除同步。SecretStorage 存系统钥匙串，不跨机同步，代价是换机器需重填一次。
  - **为何保留 `~/.wakatime.cfg` 回退**：过渡期用户不填 token 也能用，不强制迁移。
+ - **Orca 版对应物**：没有命令面板，凭证入口是面板顶部的「凭证」按钮（写入 `orca.secrets`），
+   同样回退读 `~/.wakatime.cfg`；但 API Key 现在读不了数据（实测 401/403），实际必须填 OAuth token。
 
  ## 待确认
 

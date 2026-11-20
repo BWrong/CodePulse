@@ -1,0 +1,20 @@
+{
+  "name": "codepulse-orca",
+  "displayName": "CodePulse for Orca",
+  "description": "在 Orca 状态栏显示今日编码时长，面板里按项目查看编码时间分布与 AI 统计",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "validate": "orca plugin validate .",
+    "test": "orca plugin test .",
+    "check": "orca plugin check .",
+    "dev": "orca plugin dev watch . --check --shot .orca/shots",
+    "load": "orca plugin dev load .",
+    "unload": "orca plugin dev unload ."
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "manifestVersion": 2,
+  "id": "codepulse",
+  "name": "CodePulse",
+  "version": "1.0.0",
+  "description": "在状态栏显示今日编码时长，面板里按项目查看编码时间分布与 AI 统计。",
+  "author": {
+    "name": "BWrong",
+    "url": "https://github.com/BWrong"
+  },
+  "repository": "https://github.com/BWrong/CodePulse",
+  "icon": "icon.png",
+  "engines": {
+    "orca": ">=1.4.248"
+  },
+  "execution": "trusted-worker",
+  "pluginApi": 1,
+  "main": "src/worker.ts",
+  "contributes": {
+    "panels": [
+      {
+        "id": "dashboard",
+        "title": "CodePulse",
+        "icon": "bar-chart-3",
+        "entry": "src/panel.html",
+        "ui": "html"
+      }
+    ],
+    "statusBarItems": [
+      {
+        "id": "today",
+        "text": "CodePulse",
+        "icon": "bar-chart-3",
+        "tone": "neutral",
+        "tooltip": "CodePulse：今日编码时长，从右侧栏 CodePulse 面板查看详情"
+      }
+    ],
+    "settings": [
+      {
+        "key": "minProjectDurationMinutes",
+        "title": "项目最小可见时长（分钟）",
+        "description": "统计与趋势图里忽略低于该时长的项目，0 表示不过滤。",
+        "type": "number",
+        "default": 10,
+        "minimum": 0
+      },
+      {
+        "key": "showUnrecordedProjects",
+        "title": "显示未记录项目",
+        "description": "在面板里显示「未记录项目」模块与记录完成按钮。",
+        "type": "boolean",
+        "default": false
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "kind": "storage:own"
+    },
+    {
+      "kind": "secrets:own"
+    },
+    {
+      "kind": "settings:own"
+    }
+  ]
+}
