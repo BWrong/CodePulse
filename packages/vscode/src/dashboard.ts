@@ -264,6 +264,9 @@ private async sendInitialState(): Promise<void> {
    private getHtmlForWebview(extensionUri: vscode.Uri): string {
     const minProjectMinutes = vscode.workspace.getConfiguration('codepulse').get<number>('minProjectDurationMinutes', 10);
     const minProjectSeconds = Math.max(0, Math.round(minProjectMinutes * 60));
+    const showUnrecorded = vscode.workspace
+      .getConfiguration('codepulse')
+      .get<boolean>('showUnrecordedProjects', false);
     const uplotJsUri = this.panel.webview.asWebviewUri(
       vscode.Uri.joinPath(extensionUri, 'media', 'uPlot.iife.min.js')
     );
@@ -310,7 +313,6 @@ private async sendInitialState(): Promise<void> {
       gap: 16px;
       flex-wrap: wrap;
     }
-    h1 { margin: 0; font-size: 20px; font-weight: 600; }
     .tabs {
       display: flex;
       gap: 4px;
@@ -392,13 +394,10 @@ private async sendInitialState(): Promise<void> {
       font-weight: 600;
       line-height: 1.2;
     }
-    .stat-sub {
+    .stat-inline {
       font-size: 12px;
+      font-weight: 400;
       color: var(--muted);
-      margin-top: 4px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .section {
       background: var(--card-bg);
@@ -471,12 +470,12 @@ private async sendInitialState(): Promise<void> {
       gap: 12px;
     }
     .project-detail-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 16px;
       align-items: stretch;
     }
     .project-detail-card {
-      flex: 1 1 0;
       min-width: 0;
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -649,26 +648,38 @@ private async sendInitialState(): Promise<void> {
       align-items: flex-start;
     }
     .unrecorded-main {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      min-width: 160px;
-      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-areas:
+        'label sub'
+        'total action';
+      align-items: center;
+      column-gap: 16px;
+      row-gap: 6px;
+      flex: 1 1 100%;
+      min-width: 0;
     }
     .unrecorded-label {
+      grid-area: label;
       font-size: 12px;
       color: var(--muted);
-      margin-bottom: 4px;
     }
     .unrecorded-total {
+      grid-area: total;
+      align-self: center;
       font-size: 32px;
       font-weight: 600;
       line-height: 1.2;
     }
     .unrecorded-sub {
+      grid-area: sub;
+      justify-self: end;
       font-size: 12px;
       color: var(--muted);
-      margin-top: 6px;
+    }
+    .unrecorded-main .unrecorded-empty {
+      grid-area: sub;
+      padding: 0;
     }
     .unrecorded-list {
       flex: 1 1 300px;
@@ -718,8 +729,8 @@ private async sendInitialState(): Promise<void> {
       grid-column: 1 / -1;
     }
     .unrecorded-action {
-      margin-top: 12px;
-      align-self: flex-start;
+      grid-area: action;
+      justify-self: end;
     }
 
     .info-icon {
@@ -1009,13 +1020,12 @@ private async sendInitialState(): Promise<void> {
 </head>
 <body>
   <div class="header">
-    <h1>CodePulse</h1>
     <div class="tabs">
       <button class="tab active" data-days="7">7 天</button>
       <button class="tab" data-days="30">30 天</button>
       <button class="tab" data-days="90">90 天</button>
-      <button class="tab" data-days="180">半年</button>
-      <button class="tab" data-days="365">1 年</button>
+      <button class="tab" data-days="180">180 天</button>
+      <button class="tab" data-days="365">365 天</button>
     </div>
     <div class="actions">
       <button id="openWakaTime" class="secondary">WakaTime</button>
@@ -1032,6 +1042,7 @@ private async sendInitialState(): Promise<void> {
     (function() {
       const vscode = acquireVsCodeApi();
       const MIN_PROJECT_SECONDS = ${minProjectSeconds};
+      const SHOW_UNRECORDED = ${showUnrecorded};
       let currentDays = 7;
       let chart = null;
       let chartResizeHandler = null;
@@ -1177,7 +1188,7 @@ private async sendInitialState(): Promise<void> {
         if (document.getElementById('stats-section')) return;
         contentEl.innerHTML =
           '<div id="stats-section"></div>' +
-          '<div class="section"><div class="chart-title-row"><span class="section-title" style="margin-bottom:0">每日趋势</span><button id="resetChart" class="secondary" style="padding:2px 10px;font-size:12px;">重置</button></div><div id="chart"></div></div>' +
+          '<div class="section"><div class="chart-title-row"><span class="section-title" style="margin-bottom:0">每日趋势</span><button id="resetChart" class="secondary" style="padding:2px 10px;font-size:12px;">重置缩放</button></div><div id="chart"></div></div>' +
           '<div class="section"><div id="distributionSection"><div class="distribution-loading-state">加载中…</div></div></div>' +
           '<div id="projects-section"></div>' +
           '<div id="unrecorded-wrapper"></div>';
@@ -1222,15 +1233,14 @@ private async sendInitialState(): Promise<void> {
               <div class="stat-value">\${formatDuration(summary.dailyAverageSeconds)}</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">最活跃</div>
+              <div class="stat-label">最活跃 <span class="stat-inline">\${mostActive ? escapeHtml(mostActive.date) : '暂无数据'}</span></div>
               <div class="stat-value">\${mostActive ? formatDuration(mostActive.totalSeconds) : '0m'}</div>
-              <div class="stat-sub">\${mostActive ? escapeHtml(mostActive.date) : '暂无数据'}</div>
             </div>
           </div>
         \`;
 
         const unrecorded = computeUnrecorded(summary, currentLastRecordedDate);
-        const unrecordedHtml = renderUnrecordedSection(unrecorded);
+        const unrecordedHtml = SHOW_UNRECORDED ? renderUnrecordedSection(unrecorded) : '';
 
         const projectsHtml = filteredProjects.length > 0
           ? \`
@@ -1267,7 +1277,7 @@ private async sendInitialState(): Promise<void> {
           return \`
             <div class="unrecorded-section">
               <div class="unrecorded-main">
-                <div class="unrecorded-label">未记录项目</div>
+                <div class="unrecorded-label">未记录项目<span class="info-icon" data-tip="数据截止时间：无。记录日当天数据仍计入未记录">ⓘ</span></div>
                 <div class="unrecorded-empty">尚未记录过，点击“记录完成”按钮开始</div>
                 <button id="markRecorded" class="secondary unrecorded-action">记录完成</button>
               </div>
