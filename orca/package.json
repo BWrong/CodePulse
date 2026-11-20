@@ -2,7 +2,7 @@
   "name": "codepulse-orca",
   "displayName": "CodePulse for Orca",
   "description": "在 Orca 状态栏显示今日编码时长，面板里按项目查看编码时间分布与 AI 统计",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "private": true,
   "license": "MIT",
   "scripts": {
