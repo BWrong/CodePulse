@@ -2,13 +2,14 @@
   "manifestVersion": 2,
   "id": "codepulse",
   "name": "CodePulse",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "在状态栏显示今日编码时长，面板里按项目查看编码时间分布与 AI 统计。",
   "author": {
     "name": "BWrong",
     "url": "https://github.com/BWrong"
   },
   "repository": "https://github.com/BWrong/CodePulse",
+  "license": "MIT",
   "icon": "icon.png",
   "cover": {
     "path": "cover.png",
