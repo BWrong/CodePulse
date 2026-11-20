@@ -1,6 +1,6 @@
 # 0001 Orca 插件的形态与边界
 
-Orca 版 CodePulse（`packages/orca`）要回答一个问题：在一个没有状态栏点击回调、面板帧没有网络的
+Orca 版 CodePulse（`orca`）要回答一个问题：在一个没有状态栏点击回调、面板帧没有网络的
 宿主上，怎么把 VS Code 版的功能搬过来。
 
 ## 决定
@@ -28,7 +28,7 @@ Orca 版 CodePulse（`packages/orca`）要回答一个问题：在一个没有�
 - 项目最小时长不再编译进 HTML，改由每次 `update` 消息携带（面板侧仍是同一个
   `MIN_PROJECT_SECONDS` 变量，只是从 `const` 变 `let`）。
 - 采集器里 `~/.wakatime.cfg` 的裸文件读取需要自己声明 `fs`/`os` 类型（Orca 的 typeRoots 只含
-  `.orca/types`，不随附 Node 类型），见 `packages/orca/src/node.d.ts`。
+  `.orca/types`，不随附 Node 类型），见 `orca/src/node.d.ts`。
 - WakaTime 客户端从 `https.request` 换成全局 `fetch`，行为（非 2xx 报错、15 秒超时）保持一致。
 - **`settings.get()` 的返回形状在 1.4.265 上不一致**：`.orca/types/orca-services/index.d.ts:106` 声明的是
   `{ settings }`，`orca/testing` 的 `mockHost` 给的是裸键值表。`panelSettings` 两种都认

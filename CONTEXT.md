@@ -3,7 +3,7 @@
  ## 领域
 
  CodePulse 是一个编码时间追踪插件，帮助开发者追踪和抄录自己的编码时间。两个宿主实现同一套功能：
-VS Code 扩展（`packages/vscode`）与 Orca 插件（`packages/orca`）。
+VS Code 扩展（`packages/vscode`）与 Orca 插件（`orca`，放在仓库根的单层目录里——Orca 目录索引器只认根目录或单层目录下的 `orca-plugin.json`）。
 
  - **编码时长**：通过 WakaTime 插件采集的每日心跳数据，按项目和日期汇总。
  - **抄表辅助**：用户需要定期把各项目工时抄到外部成本表（如腾讯文档）。插件提供"记录完成"按钮来标记最后一次抄表的日期时间。
@@ -22,7 +22,7 @@ VS Code 扩展（`packages/vscode`）与 Orca 插件（`packages/orca`）。
  - 趋势图每日时长按「当天 ≥ 项目最小时长阈值的项目之和」计算，低于阈值的项目不纳入趋势线与 tooltip（与项目视图、未记录模块口径一致，阈值由 `codepulse.minProjectDurationMinutes` 控制，默认 10 分钟）。
  - 项目视图进度条使用 `var(--accent)` 填充，`var(--card-bg)` + 边框作为背景，确保主题可见性。
 
- ### Orca 插件（`packages/orca`）
+ ### Orca 插件（`orca`）
 
  - 功能与 VS Code 版对齐：状态栏今日时长、7/30/90/180/365 天趋势、项目分布、项目详情环形图、AI 统计、未记录模块（按 `showUnrecordedProjects` 开关，默认不显示）。
  - 与 VS Code 版的差异只来自宿主限制：状态栏只显示今日时长、不挂点击（Orca 没有「打开插件面板」的内置动作，`shell.openExternal` 也不对 worker 开放、还要求帧内手势），面板从右侧栏图标进入，网页链接由面板里的按钮打开；uPlot 内联进 `panel.html`（面板 CSP 没有 `'self'`）；WakaTime 请求只能在插件的 Node worker 里发（面板帧 `connect-src 'none'`）。

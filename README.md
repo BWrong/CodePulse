@@ -1,12 +1,12 @@
 # CodePulse
 
-CodePulse 是 monorepo，包含三个同级的独立功能包：
+CodePulse 是 monorepo，包含两个独立功能包：
 
 
 | 包                 | 功能                                    | 入口                                                     |
 | ----------------- | ------------------------------------- | ------------------------------------------------------ |
 | `packages/vscode` | VS Code 插件：按项目汇总查看编码时间                | [packages/vscode/README.md](packages/vscode/README.md) |
-| `packages/orca`   | Orca 插件：状态栏今日编码时长 + 右侧栏面板（同一份数据与面板逻辑）| [packages/orca/README.md](packages/orca/README.md)     |
+| `orca`             | Orca 插件：状态栏今日编码时长 + 右侧栏面板（同一份数据与面板逻辑）| [orca/README.md](orca/README.md)                       |
 
 
 ## 本地开发（VS Code 插件）

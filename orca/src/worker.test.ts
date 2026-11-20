@@ -1,4 +1,4 @@
-// `orca plugin test ./packages/orca` 跑这个文件：worker 的请求处理器 + 状态栏推送。
+// `orca plugin test ./orca` 跑这个文件：worker 的请求处理器 + 状态栏推送。
 import { afterEach, assert, beforeEach, mockHost, mountWorker, test } from 'orca/testing'
 import type { TestWorker } from 'orca/testing'
 import * as main from './worker'
