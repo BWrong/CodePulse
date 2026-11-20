@@ -5,7 +5,7 @@ CodePulse 是 monorepo，包含两个独立功能包：
 
 | 包                 | 功能                                    | 入口                                                     |
 | ----------------- | ------------------------------------- | ------------------------------------------------------ |
-| `packages/vscode` | VS Code 插件：按项目汇总查看编码时间                | [packages/vscode/README.md](packages/vscode/README.md) |
+| `vscode`           | VS Code 插件：按项目汇总查看编码时间    | [vscode/README.md](vscode/README.md)                     |
 | `orca`             | Orca 插件：状态栏今日编码时长 + 右侧栏面板（同一份数据与面板逻辑）| [orca/README.md](orca/README.md)                       |
 
 
@@ -14,7 +14,7 @@ CodePulse 是 monorepo，包含两个独立功能包：
 不需要任何 VS Code 工程配置，全程在终端完成：
 
 ```bash
-cd packages/vscode
+cd vscode
 npm install        # 首次
 
 # 终端 A：常驻，保存 TS 后自动编译到 out/

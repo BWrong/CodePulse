@@ -16,7 +16,7 @@ Orca 版 CodePulse（`orca`）要回答一个问题：在一个没有状态栏�
   `'unsafe-inline'`，没有 `'self'`，外链 `<script src>` 与 `<link rel=stylesheet>` 都会被拦。
 - **面板与 worker 之间沿用 VS Code 的消息协议**：面板里保留 `window 'message'` + `switch(command)`
   那套渲染代码，只在入口加一层 shim：`postMessage({command,...})` → `plugin.request(command,...)`，
-  worker 回来的消息数组逐条派发成 `message` 事件。这样 `packages/vscode/src/dashboard.ts` 的
+  worker 回来的消息数组逐条派发成 `message` 事件。这样 `vscode/src/dashboard.ts` 的
   1800 行前端逻辑不用重写。
 - **主题变量换名**：`--vscode-*` → `--orca-*`（`--orca-background/foreground/muted-foreground/border/
   primary/card/popover/destructive/font-sans`），保留原深色回退值。

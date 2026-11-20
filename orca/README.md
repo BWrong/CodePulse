@@ -1,7 +1,7 @@
 # CodePulse for Orca
 
 Orca 版 CodePulse：状态栏显示今日编码时长，右侧栏 CodePulse 面板里看按项目汇总的编码时间、
-未记录时长与 AI 代码占比。数据仍来自 WakaTime，功能对齐 `packages/vscode`。
+未记录时长与 AI 代码占比。数据仍来自 WakaTime，功能对齐 `vscode/`。
 
 ## 形态
 
