@@ -1,0 +1,67 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stablyai/orca/main/docs/schemas/plugins/orca-catalog.v2.schema.json",
+  "catalogVersion": 2,
+  "name": "CodePulse",
+  "owner": "BWrong",
+  "plugins": [
+    {
+      "id": "bwrong.codepulse",
+      "source": {
+        "kind": "git",
+        "url": "https://github.com/BWrong/CodePulse.git",
+        "ref": "main",
+        "path": "orca"
+      },
+      "description": "在 Orca 状态栏显示今日编码时长，右侧栏面板按项目查看编码时间分布与 AI 统计。",
+      "categories": [
+        "panels",
+        "integrations"
+      ],
+      "releases": [
+        {
+          "version": "1.1.6",
+          "commit": "b116a10971473becb3e3ae14ec62f8ff07867496",
+          "contentHash": "882700d2b8ca803d354d3ca1453ae55e0ca7eb914530d8267788c45a19cc73d1",
+          "execution": "trusted-worker",
+          "minimumOrca": "1.4.248",
+          "name": "CodePulse",
+          "contributes": [
+            {
+              "kind": "panels",
+              "name": "CodePulse"
+            },
+            {
+              "kind": "statusBarItems",
+              "name": "CodePulse"
+            }
+          ],
+          "capabilities": [
+            "storage:own",
+            "secrets:own",
+            "settings:own"
+          ],
+          "images": {
+            "icon": {
+              "path": "orca/icon.png",
+              "alt": "CodePulse",
+              "sha256": "a46f7dccf9b1c1344fed9e714ef2fc3ca4b2ce43380465948250caa31e57a6c6",
+              "width": 256,
+              "height": 256
+            },
+            "cover": {
+              "path": "orca/cover.png",
+              "alt": "CodePulse 面板：今日与近 7 天编码时长、每日趋势、时段分布与项目排行",
+              "sha256": "4d921f501c8f87c82fd7f39345f8796040e982c8aae9a48c8d9e36f8dec5b656",
+              "width": 1600,
+              "height": 1000
+            }
+          },
+          "license": "MIT",
+          "repository": "https://github.com/BWrong/CodePulse",
+          "updatedAt": "2026-11-20",
+          "changelog": "首发：状态栏显示今日编码时长，右侧栏面板按项目查看编码分布与 AI 统计。"
+        }
+      ]
+    }
+  ]
+}
