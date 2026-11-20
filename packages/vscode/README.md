@@ -2,7 +2,7 @@
 
 在 VS Code 内查看按项目汇总的编码时间，辅助项目成本核算。数据由 WakaTime 采集，本插件负责读取和汇总。
 
-![CodePulse 面板](../../docs/images/vscode-dashboard.png)
+![CodePulse 面板](https://raw.githubusercontent.com/BWrong/CodePulse/main/docs/images/vscode-dashboard.png)
  
  ## 功能
  
