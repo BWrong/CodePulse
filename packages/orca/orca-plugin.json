@@ -2,7 +2,7 @@
   "manifestVersion": 2,
   "id": "codepulse",
   "name": "CodePulse",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "在状态栏显示今日编码时长，面板里按项目查看编码时间分布与 AI 统计。",
   "author": {
     "name": "BWrong",
@@ -10,6 +10,10 @@
   },
   "repository": "https://github.com/BWrong/CodePulse",
   "icon": "icon.png",
+  "cover": {
+    "path": "cover.png",
+    "alt": "CodePulse 面板：今日与近 7 天编码时长、每日趋势、时段分布与项目排行"
+  },
   "engines": {
     "orca": ">=1.4.248"
   },
