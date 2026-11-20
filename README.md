@@ -3,12 +3,10 @@
 CodePulse 是 monorepo，包含三个同级的独立功能包：
 
 
-| 包                      | 功能                                                                               | 入口                                                               |
-| ---------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `packages/vscode`      | VS Code 插件：按项目汇总查看编码时间                                                           | [packages/vscode/README.md](packages/vscode/README.md)           |
-| `packages/orca`        | Orca 插件：状态栏今日编码时长 + 右侧栏面板（同一份数据与面板逻辑）                                        | [packages/orca/README.md](packages/orca/README.md)               |
-| `packages/codepulse`   | 终端编码时间采集：CLI + zsh 插件（废弃，改用各 agent 的插件更加精确，wakatime 有提供 ClaudeCode，Codex，Pi 的插件） | [packages/codepulse/README.md](packages/codepulse/README.md)     |
-| `packages/pi-wakatime` | Pi 插件：通过 WakaTime CLI 同步 AI 编码活动（废弃，社区有现成的了，不再重复造轮子）                             | [packages/pi-wakatime/README.md](packages/pi-wakatime/README.md) |
+| 包                 | 功能                                    | 入口                                                     |
+| ----------------- | ------------------------------------- | ------------------------------------------------------ |
+| `packages/vscode` | VS Code 插件：按项目汇总查看编码时间                | [packages/vscode/README.md](packages/vscode/README.md) |
+| `packages/orca`   | Orca 插件：状态栏今日编码时长 + 右侧栏面板（同一份数据与面板逻辑）| [packages/orca/README.md](packages/orca/README.md)     |
 
 
 ## 本地开发（VS Code 插件）
