@@ -19,9 +19,9 @@
       ],
       "releases": [
         {
-          "version": "1.1.6",
-          "commit": "b116a10971473becb3e3ae14ec62f8ff07867496",
-          "contentHash": "882700d2b8ca803d354d3ca1453ae55e0ca7eb914530d8267788c45a19cc73d1",
+          "version": "1.1.7",
+          "commit": "33dbbd0b066783c1acf3e3bea2cca0870b7a9991",
+          "contentHash": "ad11de45fee92bd3ae95e3e9611048581a31b2e3636abc95fdc6f99b2640965f",
           "execution": "trusted-worker",
           "minimumOrca": "1.4.248",
           "name": "CodePulse",
@@ -58,8 +58,8 @@
           },
           "license": "MIT",
           "repository": "https://github.com/BWrong/CodePulse",
-          "updatedAt": "2026-11-20",
-          "changelog": "首发：状态栏显示今日编码时长，右侧栏面板按项目查看编码分布与 AI 统计。"
+          "updatedAt": "2026-11-22",
+          "changelog": "修复：项目详情的 AI 代码占比只统计新增行数，批量删除不再把比例算成人工；标题后加 ⓘ 说明算法。"
         }
       ]
     }
