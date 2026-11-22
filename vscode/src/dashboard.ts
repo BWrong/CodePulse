@@ -1509,7 +1509,7 @@ private async sendInitialState(): Promise<void> {
           '</div>' +
           '</div>' +
           '<div class="project-detail-card project-detail-card--donut">' +
-          '<div class="project-detail-donut-title">AI 代码占比</div>' +
+          '<div class="project-detail-donut-title">AI 代码占比<span class="info-icon" data-tip="按新增行数统计：AI 新增 ÷（AI 新增 + 人工新增）。删除行不计入，避免一次批量删文件把比例翻过去。数据来自 WakaTime 的 AI 行数统计。">ⓘ</span></div>' +
           '<div class="project-detail-donut-wrap">' +
           '<div class="project-detail-donut" id="projectDetailAiLineDonut"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" stroke-width="15"/></svg><div class="project-detail-donut-center">-</div></div>' +
           '<div class="project-detail-donut-legend" id="projectDetailAiLineLegend"><div class="project-detail-loading">加载中…</div></div>' +

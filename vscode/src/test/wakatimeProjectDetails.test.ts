@@ -82,9 +82,9 @@ suite('aggregateProjectDetails', () => {
       aiTotalTokens: 1200,
       aiModelCost: 0.03,
       aiCacheHitRate: 0.3333333333333333,
-      aiLineRatio: 0.36666666666666664,
-      aiLines: 550,
-      humanLines: 950,
+      aiLineRatio: 0.3333333333333333,
+      aiLines: 400,
+      humanLines: 800,
       aiSessions: 10,
     });
     assert.strictEqual(details.editors.length, 2);

@@ -91,9 +91,7 @@ export function aggregateProjectDetails(
 ): ProjectDetails {
   let totalSeconds = 0;
   let aiAdditions = 0;
-  let aiDeletions = 0;
   let humanAdditions = 0;
-  let humanDeletions = 0;
   let aiInputTokens = 0;
   let aiCachedInputTokens = 0;
   let aiOutputTokens = 0;
@@ -106,9 +104,7 @@ export function aggregateProjectDetails(
   for (const day of response.data) {
     totalSeconds += day.grand_total?.total_seconds ?? 0;
     aiAdditions += day.grand_total?.ai_additions ?? 0;
-    aiDeletions += day.grand_total?.ai_deletions ?? 0;
     humanAdditions += day.grand_total?.human_additions ?? 0;
-    humanDeletions += day.grand_total?.human_deletions ?? 0;
     aiInputTokens += day.grand_total?.ai_input_tokens ?? 0;
     aiCachedInputTokens += day.grand_total?.ai_cached_input_tokens ?? 0;
     aiOutputTokens += day.grand_total?.ai_output_tokens ?? 0;
@@ -128,8 +124,10 @@ export function aggregateProjectDetails(
   const aiTotalInput = aiInputTokens + aiCachedInputTokens;
   const aiCacheHitRate = aiTotalInput > 0 ? aiCachedInputTokens / aiTotalInput : 0;
 
-  const aiLines = aiAdditions + aiDeletions;
-  const totalLines = aiLines + humanAdditions + humanDeletions;
+  // 只比新增行数：删除行记在谁头上不代表谁写的代码，一次批量删文件就能把比例翻过去。
+  const aiLines = aiAdditions;
+  const humanLines = humanAdditions;
+  const totalLines = aiLines + humanLines;
   const aiLineRatio = totalLines > 0 ? aiLines / totalLines : 0;
 
   const toDimensionItems = (map: Map<string, number>): ProjectDimensionItem[] => {
@@ -152,7 +150,7 @@ export function aggregateProjectDetails(
       aiCacheHitRate,
       aiLineRatio,
       aiLines,
-      humanLines: humanAdditions + humanDeletions,
+      humanLines,
       aiSessions,
     },
     editors: toDimensionItems(editorMap),
