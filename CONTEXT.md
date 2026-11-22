@@ -4,6 +4,7 @@
 
  CodePulse 是一个编码时间追踪插件，帮助开发者追踪和抄录自己的编码时间。两个宿主实现同一套功能：
 两个宿主各占仓库根的一个目录：VS Code 扩展（`vscode`）与 Orca 插件（`orca`）。不再有 `packages/` 这一层——Orca 的目录索引器只对根目录或 `plugin/` 这类单层目录生效，而两个包同级放根目录对谁都更好找。
+两个包的版本号保持一致（`vscode/package.json`、`orca/package.json`、`orca/orca-plugin.json` 同号），发版时一起升。
 仓库根的 `orca-catalog.json` 是给自己用的单插件目录：Orca 的收录索引器要求 `orca-plugin.json` 在根目录或单层目录里，多插件/子目录仓库必须靠根目录 catalog 的 `source.path` 指过去。每次发版先 `orca plugin release-entry ./orca`，把输出的 release 条目贴进 catalog（commit 与 contentHash 必须一致），再打 `-a` 注释标签。
 
  - **编码时长**：通过 WakaTime 插件采集的每日心跳数据，按项目和日期汇总。
